@@ -143,5 +143,7 @@ func (p *edstemProvider) DataSources(_ context.Context) []func() datasource.Data
 
 // Resources defines the resources implemented in the provider.
 func (p *edstemProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewLessonResource,
+	}
 }
