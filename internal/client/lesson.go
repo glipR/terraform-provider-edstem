@@ -24,7 +24,7 @@ type Lesson struct {
 	DueAt                                optional.String `json:"due_at"`
 	GradePassbackAutoSend                bool            `json:"grade_passback_auto_send"`
 	GradePassbackMode                    string          `json:"grade_passback_mode"`
-	GradePassbackScaleTo                 optional.Int    `json:"grade_passback_scale_to"`
+	GradePassbackScaleTo                 optional.String `json:"grade_passback_scale_to"`
 	Id                                   int             `json:"id"`
 	Index                                optional.Int    `json:"index"`
 	IsHidden                             bool            `json:"is_hidden"`
@@ -97,4 +97,36 @@ func (c *Client) GetLesson(lesson_id int) (*Lesson, error) {
 		return nil, err
 	}
 	return &lesson.LessonObj, nil
+}
+
+func (c *Client) UpdateLesson(lesson Lesson) error {
+	request := &LessonUpdateRequest{LessonObj: lesson}
+	buf := bytes.Buffer{}
+	err := json.NewEncoder(&buf).Encode(request)
+	if err != nil {
+		return err
+	}
+	fmt.Println(buf.String())
+	_, err = c.httpRequest(fmt.Sprintf("lessons/%d", lesson.Id), "PUT", buf)
+	return err
+}
+
+func (c *Client) CreateLesson(lesson *Lesson) error {
+	lesson_request := &NewLessonRequest{Kind: lesson.Kind}
+	buf := bytes.Buffer{}
+	err := json.NewEncoder(&buf).Encode(lesson_request)
+	if err != nil {
+		return err
+	}
+	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "POST", buf)
+	if err != nil {
+		return err
+	}
+	resp_lesson := &LessonResponse{}
+	err = json.NewDecoder(body).Decode(resp_lesson)
+	if err != nil {
+		return err
+	}
+	lesson.Id = resp_lesson.LessonObj.Id
+	return c.UpdateLesson(*lesson)
 }
