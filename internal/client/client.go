@@ -31,6 +31,7 @@ func NewClient(course_id, token *string) (*Client, error) {
 
 func (c *Client) httpRequest(path, method string, body bytes.Buffer, boundary *string) (closer io.ReadCloser, err error) {
 	fmt.Println("Requesting", c.requestPath((path)), "with method", method)
+	fmt.Println(body.String())
 	req, err := http.NewRequest(method, c.requestPath(path), &body)
 	if err != nil {
 		return nil, err
@@ -39,17 +40,13 @@ func (c *Client) httpRequest(path, method string, body bytes.Buffer, boundary *s
 	switch method {
 	case "GET":
 	case "DELETE":
-	case "POST":
-		if boundary != nil {
-			req.Header.Add("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
-			req.Header.Add("content-type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
-		} else {
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("content-type", "application/json")
-		}
 	default:
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Add("content-type", "application/json")
+	}
+	if boundary != nil {
+		req.Header.Set("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
+		req.Header.Set("content-type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
 	}
 
 	resp, err := c.HTTPClient.Do(req)
