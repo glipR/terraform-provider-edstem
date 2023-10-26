@@ -29,7 +29,7 @@ func NewClient(course_id, token *string) (*Client, error) {
 	return &c, nil
 }
 
-func (c *Client) httpRequest(path, method string, body bytes.Buffer) (closer io.ReadCloser, err error) {
+func (c *Client) httpRequest(path, method string, body bytes.Buffer, boundary *string) (closer io.ReadCloser, err error) {
 	fmt.Println("Requesting", c.requestPath((path)), "with method", method)
 	req, err := http.NewRequest(method, c.requestPath(path), &body)
 	if err != nil {
@@ -39,6 +39,14 @@ func (c *Client) httpRequest(path, method string, body bytes.Buffer) (closer io.
 	switch method {
 	case "GET":
 	case "DELETE":
+	case "POST":
+		if boundary != nil {
+			req.Header.Add("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
+			req.Header.Add("content-type", fmt.Sprintf("multipart/form-data; boundary=%s", *boundary))
+		} else {
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("content-type", "application/json")
+		}
 	default:
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Add("content-type", "application/json")

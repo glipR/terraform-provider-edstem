@@ -3,14 +3,16 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"terraform-provider-edstem/internal/client"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -57,44 +59,45 @@ func (r *lessonResource) Metadata(_ context.Context, req resource.MetadataReques
 }
 
 type lessonResourceModel struct {
-	id                                       types.Int64  `tfsdk:"id"`
-	attempts                                 types.Int64  `tfsdk:"attempts"`
-	available_at                             types.String `tfsdk:"available_at"`
-	due_at                                   types.String `tfsdk:"due_at"`
-	grade_passback_auto_send                 types.Bool   `tfsdk:"grade_passback_auto_send"`
-	grade_passback_mode                      types.String `tfsdk:"grade_passback_mode"`
-	grade_passback_scale_to                  types.String `tfsdk:"grade_passback_scale_to"`
-	index                                    types.Int64  `tfsdk:"index"`
-	is_hidden                                types.Bool   `tfsdk:"is_hidden"`
-	is_timed                                 types.Bool   `tfsdk:"is_timed"`
-	is_unlisted                              types.Bool   `tfsdk:"is_unlisted"`
-	kind                                     types.String `tfsdk:"kind"`
-	late_submissions                         types.Bool   `tfsdk:"late_submissions"`
-	locked_at                                types.String `tfsdk:"locked_at"`
-	module_id                                types.Int64  `tfsdk:"module_id"`
-	openable                                 types.Bool   `tfsdk:"openable"`
-	openable_without_attempt                 types.Bool   `tfsdk:"openable_without_attempt"`
-	outline                                  types.String `tfsdk:"outline"`
-	password                                 types.String `tfsdk:"password"`
-	prerequisites                            types.List   `tfsdk:"prerequisites"`
-	release_challenge_solutions              types.Bool   `tfsdk:"release_challenge_solutions"`
-	release_challenge_solutions_while_active types.Bool   `tfsdk:"release_challenge_solutions"`
-	release_feedback                         types.Bool   `tfsdk:"release_feedback"`
-	release_feedback_while_active            types.Bool   `tfsdk:"release_feedback_while_active"`
-	release_quiz_correctness_only            types.Bool   `tfsdk:"release_quiz_correctness_only"`
-	release_quiz_solutions                   types.Bool   `tfsdk:"release_quiz_solutions"`
-	reopen_submissions                       types.Bool   `tfsdk:"reopen_submissions"`
-	require_user_override                    types.Bool   `tfsdk:"require_user_override"`
-	quiz_active_status                       types.String `tfsdk:"quiz_active_status"`
-	quiz_mode                                types.String `tfsdk:"quiz_mode"`
-	quiz_question_number_style               types.String `tfsdk:"quiz_question_number_style"`
-	solutions_at                             types.String `tfsdk:"solutions_at"`
-	state                                    types.String `tfsdk:"state"`
-	timer_duration                           types.Int64  `tfsdk:"timer_duration"`
-	timer_expiration_access                  types.Bool   `tfsdk:"timer_expiration_access"`
-	title                                    types.String `tfsdk:"title"`
-	tutorial_regex                           types.String `tfsdk:"tutorial_regex"`
-	lesson_type                              types.String `tfsdk:"type"`
+	Id                                   types.Int64  `tfsdk:"id"`
+	Attempts                             types.Int64  `tfsdk:"attempts"`
+	AvailableAt                          types.String `tfsdk:"available_at"`
+	DueAt                                types.String `tfsdk:"due_at"`
+	GradePassbackAutoSend                types.Bool   `tfsdk:"grade_passback_auto_send"`
+	GradePassbackMode                    types.String `tfsdk:"grade_passback_mode"`
+	GradePassbackScaleTo                 types.String `tfsdk:"grade_passback_scale_to"`
+	Index                                types.Int64  `tfsdk:"index"`
+	IsHidden                             types.Bool   `tfsdk:"is_hidden"`
+	IsTimed                              types.Bool   `tfsdk:"is_timed"`
+	IsUnlisted                           types.Bool   `tfsdk:"is_unlisted"`
+	Kind                                 types.String `tfsdk:"kind"`
+	LateSubmissions                      types.Bool   `tfsdk:"late_submissions"`
+	LockedAt                             types.String `tfsdk:"locked_at"`
+	ModuleId                             types.Int64  `tfsdk:"module_id"`
+	Openable                             types.Bool   `tfsdk:"openable"`
+	OpenableWithoutAttempt               types.Bool   `tfsdk:"openable_without_attempt"`
+	Outline                              types.String `tfsdk:"outline"`
+	Password                             types.String `tfsdk:"password"`
+	Prerequisites                        types.List   `tfsdk:"prerequisites"`
+	ReleaseChallengeSolutions            types.Bool   `tfsdk:"release_challenge_solutions"`
+	ReleaseChallengeSolutionsWhileActive types.Bool   `tfsdk:"release_challenge_solutions_while_active"`
+	ReleaseFeedback                      types.Bool   `tfsdk:"release_feedback"`
+	ReleaseFeedbackWhileActive           types.Bool   `tfsdk:"release_feedback_while_active"`
+	ReleaseQuizCorrectnessOnly           types.Bool   `tfsdk:"release_quiz_correctness_only"`
+	ReleaseQuizSolutions                 types.Bool   `tfsdk:"release_quiz_solutions"`
+	ReOpenSubmissions                    types.Bool   `tfsdk:"reopen_submissions"`
+	RequireUserOverride                  types.Bool   `tfsdk:"require_user_override"`
+	QuizActiveStatus                     types.String `tfsdk:"quiz_active_status"`
+	QuizMode                             types.String `tfsdk:"quiz_mode"`
+	QuizQuestionNumberStyle              types.String `tfsdk:"quiz_question_number_style"`
+	SolutionsAt                          types.String `tfsdk:"solutions_at"`
+	State                                types.String `tfsdk:"state"`
+	TimerDuration                        types.Int64  `tfsdk:"timer_duration"`
+	TimerExpirationAccess                types.Bool   `tfsdk:"timer_expiration_access"`
+	Title                                types.String `tfsdk:"title"`
+	TutorialRegex                        types.String `tfsdk:"tutorial_regex"`
+	Type                                 types.String `tfsdk:"type"`
+	LastUpdated                          types.String `tfsdk:"last_updated"`
 }
 
 // Schema defines the schema for the resource.
@@ -103,6 +106,9 @@ func (r *lessonResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"attempts": schema.Int64Attribute{
 				Optional: true,
@@ -270,100 +276,93 @@ func (r *lessonResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional: true,
 				Computed: true,
 			},
+			"last_updated": schema.StringAttribute{
+				Computed: true,
+			},
 		},
 	}
 }
 
 func (model *lessonResourceModel) MapAPIObj(ctx context.Context) client.Lesson {
 	var obj client.Lesson
-	if !model.attempts.IsNull() {
-		obj.Attempts.Set(int(model.attempts.ValueInt64()))
+	if !model.Attempts.IsNull() {
+		obj.Attempts.Set(int(model.Attempts.ValueInt64()))
 	}
-	if !model.available_at.IsNull() {
-		obj.AvailableAt.Set(model.available_at.ValueString())
+	if !model.AvailableAt.IsNull() {
+		obj.AvailableAt.Set(model.AvailableAt.ValueString())
 	}
-	if !model.due_at.IsNull() {
-		obj.DueAt.Set(model.due_at.ValueString())
+	if !model.DueAt.IsNull() {
+		obj.DueAt.Set(model.DueAt.ValueString())
 	}
-	obj.GradePassbackAutoSend = model.grade_passback_auto_send.ValueBool()
-	obj.GradePassbackMode = model.grade_passback_mode.String()
-	if !model.grade_passback_scale_to.IsNull() {
-		obj.GradePassbackScaleTo.Set(model.grade_passback_scale_to.ValueString())
+	obj.GradePassbackAutoSend = model.GradePassbackAutoSend.ValueBool()
+	obj.GradePassbackMode = model.GradePassbackMode.String()
+	if !model.GradePassbackScaleTo.IsNull() {
+		obj.GradePassbackScaleTo.Set(model.GradePassbackScaleTo.ValueString())
 	}
-	obj.Id = int(model.id.ValueInt64())
-	if !model.index.IsNull() {
-		obj.Index.Set(int(model.index.ValueInt64()))
+	obj.Id = int(model.Id.ValueInt64())
+	if !model.Index.IsNull() {
+		obj.Index.Set(int(model.Index.ValueInt64()))
 	}
-	obj.IsHidden = model.is_hidden.ValueBool()
-	obj.IsTimed = model.is_timed.ValueBool()
-	obj.IsUnlisted = model.is_unlisted.ValueBool()
+	obj.IsHidden = model.IsHidden.ValueBool()
+	obj.IsTimed = model.IsTimed.ValueBool()
+	obj.IsUnlisted = model.IsUnlisted.ValueBool()
 
-	obj.Kind = model.kind.ValueString()
-	obj.LateSubmissions = model.late_submissions.ValueBool()
+	obj.Kind = model.Kind.ValueString()
+	obj.LateSubmissions = model.LateSubmissions.ValueBool()
 
-	if !model.locked_at.IsNull() {
-		obj.LockedAt.Set(model.locked_at.ValueString())
+	if !model.LockedAt.IsNull() {
+		obj.LockedAt.Set(model.LockedAt.ValueString())
 	}
-	if !model.module_id.IsNull() {
-		obj.ModuleId.Set(int(model.module_id.ValueInt64()))
+	if !model.ModuleId.IsNull() {
+		obj.ModuleId.Set(int(model.ModuleId.ValueInt64()))
 	}
 
-	obj.Openable = model.openable.ValueBool()
-	obj.OpenableWithoutAttempt = model.openable_without_attempt.ValueBool()
-	obj.Outline = model.outline.ValueString()
-	obj.Password = model.password.ValueString()
-	if !model.prerequisites.IsNull() {
-		obj.Prerequisites = make([]client.Prerequisite, 0, len(model.prerequisites.Elements()))
-		temp_iterable := make([]types.Int64, 0, len(model.prerequisites.Elements()))
+	obj.Openable = model.Openable.ValueBool()
+	obj.OpenableWithoutAttempt = model.OpenableWithoutAttempt.ValueBool()
+	obj.Outline = model.Outline.ValueString()
+	obj.Password = model.Password.ValueString()
+	if !model.Prerequisites.IsNull() {
+		obj.Prerequisites = make([]client.Prerequisite, 0, len(model.Prerequisites.Elements()))
+		temp_iterable := make([]types.Int64, 0, len(model.Prerequisites.Elements()))
 		// TODO: Error handle
-		model.prerequisites.ElementsAs(ctx, &temp_iterable, false)
+		model.Prerequisites.ElementsAs(ctx, &temp_iterable, false)
 		for i := range temp_iterable {
 			obj.Prerequisites[i].RequiredLessonId = int(temp_iterable[i].ValueInt64())
 		}
 	}
-	obj.ReleaseChallengeSolutions = model.release_challenge_solutions.ValueBool()
-	obj.ReleaseChallengeSolutionsWhileActive = model.release_challenge_solutions_while_active.ValueBool()
-	obj.ReleaseFeedback = model.release_feedback.ValueBool()
-	obj.ReleaseFeedbackWhileActive = model.release_feedback_while_active.ValueBool()
-	obj.ReleaseQuizCorrectnessOnly = model.release_quiz_correctness_only.ValueBool()
-	obj.ReleaseQuizSolutions = model.release_quiz_solutions.ValueBool()
-	obj.ReOpenSubmissions = model.reopen_submissions.ValueBool()
-	obj.RequireUserOverride = model.require_user_override.ValueBool()
+	obj.ReleaseChallengeSolutions = model.ReleaseChallengeSolutions.ValueBool()
+	obj.ReleaseChallengeSolutionsWhileActive = model.ReleaseChallengeSolutionsWhileActive.ValueBool()
+	obj.ReleaseFeedback = model.ReleaseFeedback.ValueBool()
+	obj.ReleaseFeedbackWhileActive = model.ReleaseFeedback.ValueBool()
+	obj.ReleaseQuizCorrectnessOnly = model.ReleaseQuizCorrectnessOnly.ValueBool()
+	obj.ReleaseQuizSolutions = model.ReleaseQuizSolutions.ValueBool()
+	obj.ReOpenSubmissions = model.ReOpenSubmissions.ValueBool()
+	obj.RequireUserOverride = model.RequireUserOverride.ValueBool()
 
 	obj.QuizSettings = client.QuizSettings{
-		QuizActiveStatus:        model.quiz_active_status.ValueString(),
-		QuizMode:                model.quiz_mode.ValueString(),
-		QuizQuestionNumberStyle: model.quiz_question_number_style.ValueString(),
+		QuizActiveStatus:        model.QuizActiveStatus.ValueString(),
+		QuizMode:                model.QuizMode.ValueString(),
+		QuizQuestionNumberStyle: model.QuizQuestionNumberStyle.ValueString(),
 	}
 
-	if !model.solutions_at.IsNull() {
-		obj.SolutionsAt.Set(model.solutions_at.ValueString())
+	if !model.SolutionsAt.IsNull() {
+		obj.SolutionsAt.Set(model.SolutionsAt.ValueString())
 	}
-	obj.State = model.state.ValueString()
-	obj.TimerDuration = int(model.timer_duration.ValueInt64())
-	obj.TimerExpirationAccess = model.timer_expiration_access.ValueBool()
-	obj.Title = model.title.ValueString()
-	obj.TutorialRegex = model.tutorial_regex.ValueString()
-	obj.Type = model.lesson_type.ValueString()
+	obj.State = model.State.ValueString()
+	obj.TimerDuration = int(model.TimerDuration.ValueInt64())
+	obj.TimerExpirationAccess = model.TimerExpirationAccess.ValueBool()
+	obj.Title = model.Title.ValueString()
+	obj.TutorialRegex = model.TutorialRegex.ValueString()
+	obj.Type = model.Type.ValueString()
 
 	return obj
 }
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *lessonResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
-	var test types.String
-	diags := req.Plan.GetAttribute(ctx, path.Root("title"), &test)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	fmt.Println(test.ValueString())
-
 	// Retrieve values from plan
 	var plan lessonResourceModel
-	diags = req.Plan.Get(ctx, &plan)
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -373,7 +372,7 @@ func (r *lessonResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	r.client.CreateLesson(&api_obj)
 
-	plan.id = types.Int64Value(int64(api_obj.Id))
+	plan.Id = types.Int64Value(int64(api_obj.Id))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -393,15 +392,15 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	_, err := r.client.GetLesson(int(state.id.ValueInt64()))
+	_, err := r.client.GetLesson(int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Lesson Object",
-			fmt.Sprintf("Could not read Lesson ID %d: %s", state.id.ValueInt64(), err.Error()),
+			fmt.Sprintf("Could not read Lesson ID %d: %s", state.Id.ValueInt64(), err.Error()),
 		)
 	}
 
-	// TODO: For now, nothing happens with the read elements. Should update state.
+	// TODO: For now, nothing happens with the read elements. Should update state to confirm any changes necessary.
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -412,6 +411,32 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *lessonResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Retrieve values from plan
+	var plan lessonResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	api_obj := plan.MapAPIObj(ctx)
+
+	err := r.client.UpdateLesson(&api_obj)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Lesson Object",
+			fmt.Sprintf("Could not update Lesson ID %d: %s", api_obj.Id, err.Error()),
+		)
+	}
+
+	plan.Id = types.Int64Value(int64(api_obj.Id))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

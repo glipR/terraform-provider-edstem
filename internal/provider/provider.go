@@ -145,5 +145,6 @@ func (p *edstemProvider) DataSources(_ context.Context) []func() datasource.Data
 func (p *edstemProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewLessonResource,
+		NewSlideResource,
 	}
 }

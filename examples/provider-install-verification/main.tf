@@ -17,7 +17,18 @@ data "edstem_lesson" "example" {
 resource "edstem_lesson" "testing" {
     title = "Terraform Testing"
 
-    timer_duration = 30
+    timer_duration = 120
+
+    password = "terraform_is_cool"
+
+    index = 3
+
+    due_at = formatdate("YYYY-MM-DD'T'hh:mm:ss.000Z", "2023-10-28T23:45:54+11:00")
+}
+
+resource "edstem_slide" "slide1" {
+    type = "document"
+    lesson_id = edstem_lesson.testing.id
 }
 
 output "edu_lessons" {

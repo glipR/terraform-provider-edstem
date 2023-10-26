@@ -74,7 +74,7 @@ type LessonUpdateRequest struct {
 }
 
 func (c *Client) GetLessons() ([]Lesson, error) {
-	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "GET", bytes.Buffer{})
+	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (c *Client) GetLessons() ([]Lesson, error) {
 }
 
 func (c *Client) GetLesson(lesson_id int) (*Lesson, error) {
-	body, err := c.httpRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{})
+	body, err := c.httpRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,15 +99,23 @@ func (c *Client) GetLesson(lesson_id int) (*Lesson, error) {
 	return &lesson.LessonObj, nil
 }
 
-func (c *Client) UpdateLesson(lesson Lesson) error {
-	request := &LessonUpdateRequest{LessonObj: lesson}
+func (c *Client) UpdateLesson(lesson *Lesson) error {
+	request := &LessonUpdateRequest{LessonObj: *lesson}
 	buf := bytes.Buffer{}
 	err := json.NewEncoder(&buf).Encode(request)
 	if err != nil {
 		return err
 	}
-	fmt.Println(buf.String())
-	_, err = c.httpRequest(fmt.Sprintf("lessons/%d", lesson.Id), "PUT", buf)
+	body, err := c.httpRequest(fmt.Sprintf("lessons/%d", lesson.Id), "PUT", buf, nil)
+	if err != nil {
+		return err
+	}
+	resp_lesson := &LessonResponse{}
+	err = json.NewDecoder(body).Decode(resp_lesson)
+	if err != nil {
+		return err
+	}
+	lesson.Id = resp_lesson.LessonObj.Id
 	return err
 }
 
@@ -118,7 +126,7 @@ func (c *Client) CreateLesson(lesson *Lesson) error {
 	if err != nil {
 		return err
 	}
-	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "POST", buf)
+	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "POST", buf, nil)
 	if err != nil {
 		return err
 	}
@@ -127,6 +135,5 @@ func (c *Client) CreateLesson(lesson *Lesson) error {
 	if err != nil {
 		return err
 	}
-	lesson.Id = resp_lesson.LessonObj.Id
-	return c.UpdateLesson(*lesson)
+	return c.UpdateLesson(lesson)
 }
