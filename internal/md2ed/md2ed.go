@@ -65,6 +65,19 @@ func renderCodeBlock(w io.Writer, p *ast.CodeBlock, entering bool) {
 
 }
 
+func renderMath(w io.Writer, p *ast.Math, entering bool) {
+	io.WriteString(w, "$")
+	io.WriteString(w, string(p.Literal))
+	io.WriteString(w, "$")
+}
+
+func renderMathBlock(w io.Writer, p *ast.MathBlock, entering bool) {
+	io.WriteString(w, "<paragraph>$$</paragraph>")
+	if entering {
+		io.WriteString(w, "<paragraph>"+string(p.Literal)+"</paragraph>")
+	}
+}
+
 func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
 	if emph, ok := node.(*ast.Emph); ok {
 		renderEmphasis(w, emph, entering)
@@ -84,6 +97,14 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 	}
 	if code, ok := node.(*ast.CodeBlock); ok {
 		renderCodeBlock(w, code, entering)
+		return ast.GoToNext, true
+	}
+	if math, ok := node.(*ast.Math); ok {
+		renderMath(w, math, entering)
+		return ast.GoToNext, true
+	}
+	if math, ok := node.(*ast.MathBlock); ok {
+		renderMathBlock(w, math, entering)
 		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
