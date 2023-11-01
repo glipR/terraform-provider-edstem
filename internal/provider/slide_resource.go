@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/md2ed"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -54,9 +57,14 @@ func (r *slideResource) Metadata(_ context.Context, req resource.MetadataRequest
 }
 
 type slideResourceModel struct {
-	Id       types.Int64  `tfsdk:"id"`
-	Type     types.String `tfsdk:"type"`
-	LessonId types.Int64  `tfsdk:"lesson_id"`
+	Id          types.Int64  `tfsdk:"id"`
+	Type        types.String `tfsdk:"type"`
+	LessonId    types.Int64  `tfsdk:"lesson_id"`
+	Title       types.String `tfsdk:"title"`
+	Index       types.Int64  `tfsdk:"index"`
+	IsHidden    types.Bool   `tfsdk:"is_hidden"`
+	Content     types.String `tfsdk:"content"`
+	ContentType types.String `tfsdk:"content_type"`
 }
 
 // Schema defines the schema for the resource.
@@ -76,18 +84,44 @@ func (r *slideResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"lesson_id": schema.Int64Attribute{
 				Required: true,
 			},
+			"title": schema.StringAttribute{
+				Required: true,
+			},
+			"index": schema.Int64Attribute{
+				Required: true,
+			},
+			"is_hidden": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(false),
+				Optional: true,
+				Computed: true,
+			},
+			"content": schema.StringAttribute{
+				Required: true,
+			},
+			"content_type": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString("md"),
+			},
 		},
 	}
 }
 
-func (model *slideResourceModel) MapAPIObj(ctx context.Context) client.Slide {
+func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*client.Slide, error) {
 	var obj client.Slide
 
 	obj.Id = int(model.Id.ValueInt64())
 	obj.Type = model.Type.ValueString()
 	obj.LessonId = int(model.LessonId.ValueInt64())
-
-	return obj
+	obj.Title = model.Title.ValueString()
+	obj.Index = int(model.Index.ValueInt64())
+	obj.IsHidden = model.IsHidden.ValueBool()
+	obj.Content = model.Content.ValueString()
+	if model.ContentType.ValueString() == "md" {
+		obj.Content = md2ed.RenderMDToEd(obj.Content)
+		fmt.Print(obj.Content)
+	}
+	return &obj, nil
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -100,9 +134,15 @@ func (r *slideResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	api_obj := plan.MapAPIObj(ctx)
+	api_obj, err := plan.MapAPIObj(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Slide Object",
+			fmt.Sprintf("Could not create Slide: %s", err.Error()),
+		)
+	}
 
-	err := r.client.CreateSlide(&api_obj)
+	err = r.client.CreateSlide(api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Slide Object",
@@ -157,9 +197,15 @@ func (r *slideResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	api_obj := plan.MapAPIObj(ctx)
+	api_obj, err := plan.MapAPIObj(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Slide Object",
+			fmt.Sprintf("Could not update Slide: %s", err.Error()),
+		)
+	}
 
-	err := r.client.UpdateSlide(&api_obj)
+	err = r.client.UpdateSlide(api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Slide Object",

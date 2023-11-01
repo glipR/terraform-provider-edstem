@@ -29,6 +29,9 @@ resource "edstem_lesson" "testing" {
 resource "edstem_slide" "slide1" {
     type = "document"
     lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - Document"
+    index = 1
+    content = file("assets/test.md")
 }
 
 output "edu_lessons" {
