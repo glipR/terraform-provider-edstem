@@ -34,6 +34,30 @@ resource "edstem_slide" "slide1" {
     content = file("assets/test.md")
 }
 
+resource "edstem_slide" "slide2" {
+    type = "quiz"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - Quiz"
+    index = 2
+    content = ""
+}
+
+resource "edstem_question" "question1" {
+    index = 1
+    lesson_slide_id = edstem_slide.slide2.id
+    type = "multiple-choice"
+    answers = ["<document version=\"2.0\"><paragraph>Test1</paragraph></document>", "<document version=\"2.0\"><paragraph>Test2</paragraph></document>"]
+    explanation = "<document version=\"2.0\"><paragraph>The answer is not A</paragraph></document>"
+    solution = [1]
+}
+
+resource "edstem_question" "question2" {
+    index = 1
+    lesson_slide_id = edstem_slide.slide2.id
+    type = "multiple-choice"
+    question_document_string = file("assets/question2.md")
+}
+
 output "edu_lessons" {
     value = data.edstem_lesson.example
 }
