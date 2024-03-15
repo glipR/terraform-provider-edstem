@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/resourceclients"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -127,7 +128,7 @@ func (d *lessonDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 
-	lesson, err := d.client.GetLesson(int(state.ID.ValueInt64()))
+	lesson, err := resourceclients.GetLesson(d.client, int(state.ID.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Unable to read Ed Lesson with ID %d", d.id),

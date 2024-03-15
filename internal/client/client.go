@@ -29,7 +29,7 @@ func NewClient(course_id, token *string) (*Client, error) {
 	return &c, nil
 }
 
-func (c *Client) httpRequest(path, method string, body bytes.Buffer, boundary *string) (closer io.ReadCloser, err error) {
+func (c *Client) HTTPRequest(path, method string, body bytes.Buffer, boundary *string) (closer io.ReadCloser, err error) {
 	fmt.Println("Requesting", c.requestPath((path)), "with method", method)
 	fmt.Println(body.String())
 	req, err := http.NewRequest(method, c.requestPath(path), &body)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/md2ed"
+	"terraform-provider-edstem/internal/resourceclients"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -107,8 +108,8 @@ func (r *slideResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 	}
 }
 
-func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*client.Slide, error) {
-	var obj client.Slide
+func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*resourceclients.Slide, error) {
+	var obj resourceclients.Slide
 
 	obj.Id = int(model.Id.ValueInt64())
 	obj.Type = model.Type.ValueString()
@@ -142,7 +143,7 @@ func (r *slideResource) Create(ctx context.Context, req resource.CreateRequest, 
 		)
 	}
 
-	err = r.client.CreateSlide(api_obj)
+	err = resourceclients.CreateSlide(r.client, api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Slide Object",
@@ -170,7 +171,7 @@ func (r *slideResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	_, err := r.client.GetSlide(int(state.LessonId.ValueInt64()), int(state.Id.ValueInt64()))
+	_, err := resourceclients.GetSlide(r.client, int(state.LessonId.ValueInt64()), int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Slide Object",
@@ -205,7 +206,7 @@ func (r *slideResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		)
 	}
 
-	err = r.client.UpdateSlide(api_obj)
+	err = resourceclients.UpdateSlide(r.client, api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Slide Object",

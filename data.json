@@ -1,0 +1,159 @@
+{
+    "challenge": {
+        "id": 113791,
+        "course_id": 12108,
+        "kind": "lesson",
+        "type": "custom",
+        "session": "",
+        "language": "",
+        "difficulty": "",
+        "explanation": "<document version=\"2.0\"><paragraph>test</paragraph><paragraph/></document>",
+        "points": 5,
+        "lesson_markable_id": null,
+        "rubric_id": null,
+        "rubric_points": null,
+        "auto_points": null,
+        "manual_solution_control": false,
+        "requires_lti_link": false,
+        "is_exam": false,
+        "exam_visibility": "any",
+        "exam_visibility_alternate_hour": false,
+        "sequential_completion": false,
+        "unavailable_after_completion": false,
+        "lab_category": "",
+        "lab_name_regex": "",
+        "lab_reset": false,
+        "tickets": {
+            "run_unit": {
+                "run_command": "",
+                "build_command": ""
+            },
+            "mark_unit": {
+                "build_command": "testing456",
+                "testcase_path": ""
+            },
+            "run_custom": {
+                "run_command": "",
+                "test_command": "",
+                "build_command": ""
+            },
+            "mark_custom": {
+                "build_command": "testing456",
+                "run_command": ""
+            },
+            "run_standard": {
+                "build_command": "testing003",
+                "run_command": ""
+            },
+            "mark_standard": {
+                "build_command": "testing456",
+                "testcases": [
+                    {
+                        "name": "Test1",
+                        "description": "",
+                        "hidden": false,
+                        "private": true,
+                        "score": 0,
+                        "max_score": 0,
+                        "skip": false,
+                        "run_limit": {
+                            "pty_size": {
+                                "rows": 0,
+                                "cols": 0
+                            },
+                            "cpu_time": null,
+                            "wall_time": null
+                        },
+                        "run_command": "",
+                        "stdin_path": "s1",
+                        "extra_paths": null,
+                        "checks": [
+                            {
+                                "name": "",
+                                "type": "check_diff",
+                                "source": {
+                                    "type": "source_mixed",
+                                    "file": ""
+                                },
+                                "transforms": [],
+                                "expect_path": "s2",
+                                "acceptable_line_error_rate": 0,
+                                "acceptable_char_error_rate": 0,
+                                "acceptable_line_errors": 2,
+                                "acceptable_char_errors": 0,
+                                "regex_match": "",
+                                "run_limit": {
+                                    "pty_size": {
+                                        "rows": 0,
+                                        "cols": 0
+                                    }
+                                },
+                                "run_command": "",
+                                "markdown": false
+                            }
+                        ],
+                        "output_files": []
+                    }
+                ],
+                "easy": false,
+                "overlay": false,
+                "mark_all": false,
+                "run_command": ""
+            }
+        },
+        "features": {
+            "treeview": false,
+            "run": true,
+            "check": true,
+            "mark": true,
+            "connect": true,
+            "network": false,
+            "terminal": true,
+            "internet": false,
+            "treeview_initially_open": true,
+            "feedback": true,
+            "manual_completion": true,
+            "anonymous_submissions": true,
+            "arguments": false,
+            "confirm_submit": true,
+            "run_before_submit": true,
+            "full": false,
+            "git_submission": false,
+            "editor": true,
+            "remote_desktop": false,
+            "intermediate_files": true
+        },
+        "settings": {
+            "points": {
+                "loss_threshold": 0,
+                "loss_every": 5,
+                "loss_amount": 2
+            },
+            "per_testcase_scores": false,
+            "max_mark": "",
+            "criteria": [],
+            "run_command": "testing123",
+            "build_command": "testing000",
+            "check_command": "testing456",
+            "terminal_command": "py testing.py",
+            "only_git_submission": false,
+            "attempt_limit_interval": 43200,
+            "max_submissions_per_interval": 15,
+            "allow_submit_after_marking_limit": true,
+            "playground": false,
+            "max_submissions_with_intermediate_files": 0,
+            "passback": {
+                "scoring_mode": "binary",
+                "max_automatic_score": 3,
+                "scale_to": 2
+            }
+        },
+        "due_at": "2023-10-28T12:45:54.000Z",
+        "is_grade_passback_available": true,
+        "attempts_within_last_interval": 0,
+        "earliest_submission_time": "2024-03-15T03:45:09.877Z",
+        "attempts_remaining": 15,
+        "extra_attempts": 0,
+        "score": 0
+    }
+}

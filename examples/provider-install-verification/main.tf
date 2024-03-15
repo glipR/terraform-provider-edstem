@@ -42,6 +42,21 @@ resource "edstem_slide" "slide2" {
     content = ""
 }
 
+resource "edstem_slide" "slide3" {
+    type = "code"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terrafor Slide - Code"
+    index = 3
+    content = "Description content"
+}
+
+resource "edstem_challenge" "slide3_code" {
+    slide_id = edstem_slide.slide3.id
+    lesson_id = edstem_slide.slide3.lesson_id
+    folder_path = "assets/code_challenge"
+    folder_sha = sha1(join("", [for f in fileset(path.cwd, "assets/code_challenge/**"): filesha1("${path.cwd}/${f}")]))
+}
+
 resource "edstem_question" "question1" {
     index = 1
     lesson_slide_id = edstem_slide.slide2.id

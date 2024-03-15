@@ -1,9 +1,10 @@
-package client
+package resourceclients
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"terraform-provider-edstem/internal/client"
 
 	"github.com/markphelps/optional"
 )
@@ -73,8 +74,8 @@ type LessonUpdateRequest struct {
 	LessonObj Lesson `json:"lesson"`
 }
 
-func (c *Client) GetLessons() ([]Lesson, error) {
-	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "GET", bytes.Buffer{}, nil)
+func GetLessons(c *client.Client) ([]Lesson, error) {
+	body, err := c.HTTPRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +87,8 @@ func (c *Client) GetLessons() ([]Lesson, error) {
 	return response.LessonList, nil
 }
 
-func (c *Client) GetLesson(lesson_id int) (*Lesson, error) {
-	body, err := c.httpRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
+func GetLesson(c *client.Client, lesson_id int) (*Lesson, error) {
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +100,14 @@ func (c *Client) GetLesson(lesson_id int) (*Lesson, error) {
 	return &lesson.LessonObj, nil
 }
 
-func (c *Client) UpdateLesson(lesson *Lesson) error {
+func UpdateLesson(c *client.Client, lesson *Lesson) error {
 	request := &LessonUpdateRequest{LessonObj: *lesson}
 	buf := bytes.Buffer{}
 	err := json.NewEncoder(&buf).Encode(request)
 	if err != nil {
 		return err
 	}
-	body, err := c.httpRequest(fmt.Sprintf("lessons/%d", lesson.Id), "PUT", buf, nil)
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d", lesson.Id), "PUT", buf, nil)
 	if err != nil {
 		return err
 	}
@@ -119,14 +120,14 @@ func (c *Client) UpdateLesson(lesson *Lesson) error {
 	return err
 }
 
-func (c *Client) CreateLesson(lesson *Lesson) error {
+func CreateLesson(c *client.Client, lesson *Lesson) error {
 	lesson_request := &NewLessonRequest{Kind: lesson.Kind}
 	buf := bytes.Buffer{}
 	err := json.NewEncoder(&buf).Encode(lesson_request)
 	if err != nil {
 		return err
 	}
-	body, err := c.httpRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "POST", buf, nil)
+	body, err := c.HTTPRequest(fmt.Sprintf("courses/%s/lessons", c.CourseID), "POST", buf, nil)
 	if err != nil {
 		return err
 	}
@@ -135,5 +136,5 @@ func (c *Client) CreateLesson(lesson *Lesson) error {
 	if err != nil {
 		return err
 	}
-	return c.UpdateLesson(lesson)
+	return UpdateLesson(c, lesson)
 }

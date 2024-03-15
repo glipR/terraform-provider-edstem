@@ -7,6 +7,7 @@ import (
 	"strings"
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/md2ed"
+	"terraform-provider-edstem/internal/resourceclients"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -134,8 +135,8 @@ func (r *questionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 }
 
-func (model *questionResourceModel) MapAPIObj(ctx context.Context) (*client.Question, error) {
-	var obj client.Question
+func (model *questionResourceModel) MapAPIObj(ctx context.Context) (*resourceclients.Question, error) {
+	var obj resourceclients.Question
 
 	obj.Id = model.Id.ValueInt64()
 	if !model.Index.IsNull() {
@@ -220,7 +221,7 @@ func (r *questionResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	err = r.client.CreateQuestion(api_obj)
+	err = resourceclients.CreateQuestion(r.client, api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Question Object",
@@ -249,7 +250,7 @@ func (r *questionResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	_, err := r.client.GetQuestion(int(state.LessonSlideId.ValueInt64()), int(state.Id.ValueInt64()))
+	_, err := resourceclients.GetQuestion(r.client, int(state.LessonSlideId.ValueInt64()), int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Question Object",
@@ -284,7 +285,7 @@ func (r *questionResource) Update(ctx context.Context, req resource.UpdateReques
 		)
 	}
 
-	err = r.client.UpdateMultichoiceQuestion(api_obj)
+	err = resourceclients.UpdateMultichoiceQuestion(r.client, api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Question Object",

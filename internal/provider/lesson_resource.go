@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/resourceclients"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -283,8 +284,8 @@ func (r *lessonResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	}
 }
 
-func (model *lessonResourceModel) MapAPIObj(ctx context.Context) client.Lesson {
-	var obj client.Lesson
+func (model *lessonResourceModel) MapAPIObj(ctx context.Context) resourceclients.Lesson {
+	var obj resourceclients.Lesson
 	if !model.Attempts.IsNull() {
 		obj.Attempts.Set(int(model.Attempts.ValueInt64()))
 	}
@@ -322,7 +323,7 @@ func (model *lessonResourceModel) MapAPIObj(ctx context.Context) client.Lesson {
 	obj.Outline = model.Outline.ValueString()
 	obj.Password = model.Password.ValueString()
 	if !model.Prerequisites.IsNull() {
-		obj.Prerequisites = make([]client.Prerequisite, 0, len(model.Prerequisites.Elements()))
+		obj.Prerequisites = make([]resourceclients.Prerequisite, 0, len(model.Prerequisites.Elements()))
 		temp_iterable := make([]types.Int64, 0, len(model.Prerequisites.Elements()))
 		// TODO: Error handle
 		model.Prerequisites.ElementsAs(ctx, &temp_iterable, false)
@@ -339,7 +340,7 @@ func (model *lessonResourceModel) MapAPIObj(ctx context.Context) client.Lesson {
 	obj.ReOpenSubmissions = model.ReOpenSubmissions.ValueBool()
 	obj.RequireUserOverride = model.RequireUserOverride.ValueBool()
 
-	obj.QuizSettings = client.QuizSettings{
+	obj.QuizSettings = resourceclients.QuizSettings{
 		QuizActiveStatus:        model.QuizActiveStatus.ValueString(),
 		QuizMode:                model.QuizMode.ValueString(),
 		QuizQuestionNumberStyle: model.QuizQuestionNumberStyle.ValueString(),
@@ -370,7 +371,7 @@ func (r *lessonResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	api_obj := plan.MapAPIObj(ctx)
 
-	r.client.CreateLesson(&api_obj)
+	resourceclients.CreateLesson(r.client, &api_obj)
 
 	plan.Id = types.Int64Value(int64(api_obj.Id))
 
@@ -392,7 +393,7 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	_, err := r.client.GetLesson(int(state.Id.ValueInt64()))
+	_, err := resourceclients.GetLesson(r.client, int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Lesson Object",
@@ -421,7 +422,7 @@ func (r *lessonResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	api_obj := plan.MapAPIObj(ctx)
 
-	err := r.client.UpdateLesson(&api_obj)
+	err := resourceclients.UpdateLesson(r.client, &api_obj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Lesson Object",

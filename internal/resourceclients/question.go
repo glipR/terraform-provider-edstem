@@ -1,10 +1,11 @@
-package client
+package resourceclients
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"terraform-provider-edstem/internal/client"
 
 	"github.com/markphelps/optional"
 )
@@ -63,8 +64,8 @@ type QuestionReadResponse struct {
 	Questions []MultiChoiceQuestionResponse `json:"questions"`
 }
 
-func (c *Client) GetQuestion(lesson_slide_id int, question_id int) (*Question, error) {
-	body, err := c.httpRequest(fmt.Sprintf("lessons/slides/%d/questions", lesson_slide_id), "GET", bytes.Buffer{}, nil)
+func GetQuestion(c *client.Client, lesson_slide_id int, question_id int) (*Question, error) {
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d/questions", lesson_slide_id), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func (c *Client) GetQuestion(lesson_slide_id int, question_id int) (*Question, e
 	return nil, errors.New(fmt.Sprintf("Question ID %d Not Found", question_id))
 }
 
-func (c *Client) UpdateMultichoiceQuestion(question *Question) error {
+func UpdateMultichoiceQuestion(c *client.Client, question *Question) error {
 	request := &MultiChoiceQuestionRequest{}
 	request.Id.Set(question.Id)
 	request.Index = question.Index
@@ -108,7 +109,7 @@ func (c *Client) UpdateMultichoiceQuestion(question *Question) error {
 	if err != nil {
 		return err
 	}
-	body, err := c.httpRequest(fmt.Sprintf("lessons/slides/questions/%d", question.Id), "PUT", buf, nil)
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/questions/%d", question.Id), "PUT", buf, nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func (c *Client) UpdateMultichoiceQuestion(question *Question) error {
 	return err
 }
 
-func (c *Client) CreateQuestion(question *Question) error {
+func CreateQuestion(c *client.Client, question *Question) error {
 	request := &MultiChoiceQuestionRequest{}
 	request.Index = question.Index
 	request.LessonSlideId = question.LessonSlideId
@@ -140,7 +141,7 @@ func (c *Client) CreateQuestion(question *Question) error {
 	if err != nil {
 		return err
 	}
-	body, err := c.httpRequest(fmt.Sprintf("lessons/slides/%d/questions", question.LessonSlideId), "POST", buf, nil)
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d/questions", question.LessonSlideId), "POST", buf, nil)
 	if err != nil {
 		return err
 	}

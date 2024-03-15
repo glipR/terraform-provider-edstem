@@ -147,5 +147,6 @@ func (p *edstemProvider) Resources(_ context.Context) []func() resource.Resource
 		NewLessonResource,
 		NewSlideResource,
 		NewQuestionResource,
+		NewChallengeResource,
 	}
 }

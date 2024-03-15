@@ -1,26 +1,28 @@
-package client
+package resourceclients
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"terraform-provider-edstem/internal/client"
 
 	"github.com/markphelps/optional"
 )
 
 type Slide struct {
-	Id        int             `json:"id"`
-	Type      string          `json:"type"`
-	Title     string          `json:"title"`
-	Index     int             `json:"index"`
-	IsHidden  bool            `json:"is_hidden"`
-	Content   string          `json:"content"`
-	CreatedAt string          `json:"created_at"`
-	UpdatedAt optional.String `json:"updated_at"`
-	LessonId  int             `json:"lesson_id"`
-	CourseId  int             `json:"course_id"`
-	UserId    int             `json:"user_id"`
+	Id          int             `json:"id"`
+	Type        string          `json:"type"`
+	Title       string          `json:"title"`
+	Index       int             `json:"index"`
+	IsHidden    bool            `json:"is_hidden"`
+	Content     string          `json:"content"`
+	CreatedAt   string          `json:"created_at"`
+	UpdatedAt   optional.String `json:"updated_at"`
+	LessonId    int             `json:"lesson_id"`
+	CourseId    int             `json:"course_id"`
+	UserId      int             `json:"user_id"`
+	ChallengeId optional.Int    `json:"challenge_id"`
 }
 
 type SlideResponse struct {
@@ -37,6 +39,7 @@ type SlideResponse struct {
 	UpdatedAt    optional.String `json:"updated_at"`
 	RubricPoints optional.Int    `json:"rubric_points"`
 	AutoPoints   optional.Int    `json:"auto_points"`
+	ChallengeId  optional.Int    `json:"challenge_id"`
 }
 
 type SlideCreateRequest struct {
@@ -69,8 +72,8 @@ type SlideEditResponse struct {
 	Slide SlideResponse `json:"slide"`
 }
 
-func (c *Client) GetSlide(lesson_id int, slide_id int) (*Slide, error) {
-	body, err := c.httpRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
+func GetSlide(c *client.Client, lesson_id int, slide_id int) (*Slide, error) {
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +99,7 @@ func (c *Client) GetSlide(lesson_id int, slide_id int) (*Slide, error) {
 	return nil, errors.New(fmt.Sprintf("Slide ID %d Not Found", slide_id))
 }
 
-func (c *Client) UpdateSlide(slide *Slide) error {
+func UpdateSlide(c *client.Client, slide *Slide) error {
 	request := &SlideUpdateRequest{}
 	request.Content = slide.Content
 	request.Id = slide.Id
@@ -118,7 +121,7 @@ func (c *Client) UpdateSlide(slide *Slide) error {
 	actual_req := bytes.Buffer{}
 	actual_req.Write([]byte(req_text))
 
-	body, err := c.httpRequest(fmt.Sprintf("lessons/slides/%d", slide.Id), "PUT", actual_req, &boundary)
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d", slide.Id), "PUT", actual_req, &boundary)
 	if err != nil {
 		return err
 	}
@@ -131,7 +134,7 @@ func (c *Client) UpdateSlide(slide *Slide) error {
 	return err
 }
 
-func (c *Client) CreateSlide(slide *Slide) error {
+func CreateSlide(c *client.Client, slide *Slide) error {
 	request := &SlideCreateRequest{}
 	request.Type = slide.Type
 
@@ -146,7 +149,7 @@ func (c *Client) CreateSlide(slide *Slide) error {
 	actual_req.Write([]byte(req_text))
 	fmt.Println(req_text)
 
-	body, err := c.httpRequest(fmt.Sprintf("lessons/%d/slides", slide.LessonId), "POST", actual_req, &boundary)
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d/slides", slide.LessonId), "POST", actual_req, &boundary)
 	if err != nil {
 		return err
 	}
@@ -161,5 +164,5 @@ func (c *Client) CreateSlide(slide *Slide) error {
 	slide.LessonId = resp_lesson.Slide.LessonId
 	slide.CourseId = resp_lesson.Slide.CourseId
 	slide.UserId = resp_lesson.Slide.UserId
-	return c.UpdateSlide(slide)
+	return UpdateSlide(c, slide)
 }
