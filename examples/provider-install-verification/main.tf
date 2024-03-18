@@ -45,7 +45,7 @@ resource "edstem_slide" "slide2" {
 resource "edstem_slide" "slide3" {
     type = "code"
     lesson_id = edstem_lesson.testing.id
-    title = "Terrafor Slide - Code"
+    title = "Terraform Slide - Code Custom Marking"
     index = 3
     content = "Description content"
 }
@@ -55,6 +55,58 @@ resource "edstem_challenge" "slide3_code" {
     lesson_id = edstem_slide.slide3.lesson_id
     folder_path = "assets/code_challenge"
     folder_sha = sha1(join("", [for f in fileset(path.cwd, "assets/code_challenge/**"): filesha1("${path.cwd}/${f}")]))
+
+    type = "custom"
+    custom_mark_time_limit_ms = 2500
+    custom_run_command = "terraform run"
+
+    feature_anonymous_submissions = true
+    feature_manual_completion = false
+}
+
+resource "edstem_slide" "slide4" {
+    type = "code"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - Code Input Output Marking"
+    index = 3
+    content = "Description content"
+}
+
+resource "edstem_challenge" "slide4_code" {
+    slide_id = edstem_slide.slide4.id
+    lesson_id = edstem_slide.slide4.lesson_id
+    // Just using the same content for code challenge.
+    folder_path = "assets/code_challenge"
+    folder_sha = sha1(join("", [for f in fileset(path.cwd, "assets/code_challenge/**"): filesha1("${path.cwd}/${f}")]))
+
+    type = "code"
+    testcase_json = jsonencode({
+        testcases = [
+            {
+                name = "Test 1"
+                hidden = true
+                time_limit_ms = 3000
+                run_command = "special_command"
+                score = 2
+                stdin_path = "1.in"
+                stdout_path = "1.out"
+                acceptable_line_errors = 1
+            },
+            {
+                name = "Test 1"
+                private = true
+                time_limit_ms = 1500
+                run_command = "special_command 2"
+                score = 4
+                stdin_path = "2.in"
+                stdout_path = "2.out"
+                acceptable_line_errors = 0
+            }
+        ]
+    })
+
+    feature_anonymous_submissions = true
+    feature_manual_completion = false
 }
 
 resource "edstem_question" "question1" {
