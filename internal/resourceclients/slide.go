@@ -3,8 +3,9 @@ package resourceclients
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"os"
+	"path"
 	"terraform-provider-edstem/internal/client"
 
 	"github.com/markphelps/optional"
@@ -96,7 +97,27 @@ func GetSlide(c *client.Client, lesson_id int, slide_id int) (*Slide, error) {
 			return &slideObj, nil
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Slide ID %d Not Found", slide_id))
+	return nil, fmt.Errorf("Slide ID %d Not Found", slide_id)
+}
+
+func GetSlideIds(c *client.Client, lesson_id int) ([]int, error) {
+	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp := &LessonWithSlidesResponse{}
+	err = json.NewDecoder(body).Decode(resp)
+	if err != nil {
+		return nil, err
+	}
+	slides := resp.Lesson.Slides
+
+	final := make([]int, len(slides))
+	for i := range slides {
+		final[i] = slides[i].Id
+	}
+
+	return final, nil
 }
 
 func UpdateSlide(c *client.Client, slide *Slide) error {
@@ -117,7 +138,6 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 	}
 	boundary := fmt.Sprintf("-----------------------------%s", "28191803313191638583308257490")
 	req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"slide\"\n\n%s--%s--\n", boundary, buf.String(), boundary)
-	fmt.Printf(req_text)
 	actual_req := bytes.Buffer{}
 	actual_req.Write([]byte(req_text))
 
@@ -165,4 +185,45 @@ func CreateSlide(c *client.Client, slide *Slide) error {
 	slide.CourseId = resp_lesson.Slide.CourseId
 	slide.UserId = resp_lesson.Slide.UserId
 	return UpdateSlide(c, slide)
+}
+
+func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string) (string, error) {
+	slide, err := GetSlide(c, lesson_id, slide_id)
+	if err != nil {
+		return "", err
+	}
+	buf := bytes.Buffer{}
+	err = json.NewEncoder(&buf).Encode(slide)
+	if err != nil {
+		return "", err
+	}
+
+	var resource_string = fmt.Sprintf("resource \"edstem_slide\" %s {\n", resource_name)
+	resource_string = resource_string + fmt.Sprintf("\tid = %d\n", slide.Id)
+	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", slide.Type)
+	resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", slide.LessonId)
+	resource_string = resource_string + fmt.Sprintf("\ttitle = \"%s\"\n", slide.Title)
+	resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", slide.Index)
+	if slide.IsHidden {
+		resource_string = resource_string + fmt.Sprintf("\tis_hidden = %t\n", slide.IsHidden)
+	}
+	// TODO: Turn back into md.
+	content_path := path.Join(folder_path, "content.md")
+	f, e := os.Create(content_path)
+	if e != nil {
+		return "", e
+	}
+	f.WriteString(slide.Content)
+	resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
+	resource_string = resource_string + "}"
+
+	if slide.Type == "code" {
+		s, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path)
+		if e != nil {
+			return "", nil
+		}
+		resource_string = resource_string + "\n\n" + s
+	}
+
+	return resource_string, nil
 }

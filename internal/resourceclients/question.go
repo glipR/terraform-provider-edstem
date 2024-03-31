@@ -3,7 +3,6 @@ package resourceclients
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"terraform-provider-edstem/internal/client"
 
@@ -86,7 +85,7 @@ func GetQuestion(c *client.Client, lesson_slide_id int, question_id int) (*Quest
 			return &questionObj, nil
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Question ID %d Not Found", question_id))
+	return nil, fmt.Errorf("Question ID %d Not Found", question_id)
 }
 
 func UpdateMultichoiceQuestion(c *client.Client, question *Question) error {

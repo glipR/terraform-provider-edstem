@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -64,8 +65,9 @@ type FileOTInitRespose struct {
 }
 
 type FileOTInitData struct {
-	FID      int `json:"fid"`
-	Revision int `json:"rev"`
+	FID      int    `json:"fid"`
+	Revision int    `json:"rev"`
+	Buffer   string `json:"buffer"`
 }
 
 type FileOTCommandCursor struct {
@@ -357,4 +359,136 @@ func UpdateChallengeRepo(conn *client.Client, challenge_id int, challenge_folder
 			return nil
 		})
 	return err
+}
+
+func ReadChallengeRepo(conn *client.Client, challenge_id int, challenge_folder_path string, repo_name string) error {
+	body, err := conn.HTTPRequest(fmt.Sprintf("challenges/%d/connect/%s", challenge_id, repo_name), "POST", bytes.Buffer{}, nil)
+	if err != nil {
+		return err
+	}
+	resp := &TicketResponse{}
+	err = json.NewDecoder(body).Decode(resp)
+	if err != nil {
+		return err
+	}
+
+	c, _, ws_err := websocket.DefaultDialer.Dial(fmt.Sprintf("wss://sahara.au.edstem.org/connect?ticket=%s", resp.Ticket), nil)
+	if ws_err != nil {
+		return ws_err
+	}
+	defer c.Close()
+
+	GetMessage(c, "client_join")
+
+	var req FSOPRequest
+	req.Type = "fsop"
+	req.Data.Type = "list_folder"
+	req.Data.Param1 = "/home"
+
+	req_body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	err = c.WriteMessage(websocket.BinaryMessage, req_body)
+	if err != nil {
+		fmt.Printf("Write error\n")
+		return err
+	}
+
+	content, get_err := GetMessage(c, "list_reply")
+	if get_err != nil {
+		return get_err
+	}
+
+	m_resp := &ListingReply{}
+	err = json.Unmarshal(content, &m_resp)
+	if err != nil {
+		return err
+	}
+
+	if len(m_resp.Data.Listing) != 0 {
+		os.MkdirAll(path.Join(challenge_folder_path, repo_name), os.ModeDir)
+	}
+
+	for _, returned := range m_resp.Data.Listing {
+		err = RecReadPath(c, fmt.Sprintf("/home/%s", returned.Name), path.Join(challenge_folder_path, repo_name, returned.Name), returned.Type != "file")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RecReadPath(conn *websocket.Conn, web_path string, local_path string, is_dir bool) error {
+	if !is_dir {
+		f, e := os.Create(local_path)
+		if e != nil {
+			return e
+		}
+		var new_req FileOpenCommand
+		new_req.Type = "file_open"
+		new_req.Data.Path = web_path
+		new_req.Data.Soft = true
+
+		req_body, err := json.Marshal(new_req)
+		if err != nil {
+			return err
+		}
+
+		err = conn.WriteMessage(websocket.BinaryMessage, req_body)
+		if err != nil {
+			fmt.Printf("Write error\n")
+			return err
+		}
+
+		content, get_err := GetMessage(conn, "file_ot_init")
+		if get_err != nil {
+			return get_err
+		}
+
+		ot_resp := &FileOTInitRespose{}
+		err = json.Unmarshal(content, &ot_resp)
+		if err != nil {
+			return err
+		}
+		f.WriteString(ot_resp.Data.Buffer)
+	} else {
+		var req FSOPRequest
+		req.Type = "fsop"
+		req.Data.Type = "list_folder"
+		req.Data.Param1 = web_path
+
+		req_body, err := json.Marshal(req)
+		if err != nil {
+			return err
+		}
+
+		err = conn.WriteMessage(websocket.BinaryMessage, req_body)
+		if err != nil {
+			fmt.Printf("Write error\n")
+			return err
+		}
+
+		content, get_err := GetMessage(conn, "list_reply")
+		if get_err != nil {
+			return get_err
+		}
+
+		m_resp := &ListingReply{}
+		err = json.Unmarshal(content, &m_resp)
+		if err != nil {
+			return err
+		}
+
+		for _, returned := range m_resp.Data.Listing {
+			err = RecReadPath(conn, fmt.Sprintf("%s/%s", web_path, returned.Name), path.Join(local_path, returned.Name), returned.Type != "file")
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

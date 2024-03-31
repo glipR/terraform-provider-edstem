@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/wshelpers"
@@ -91,7 +92,7 @@ type RunLimitConfig struct {
 
 type MarkStandardTicket struct {
 	BuildCommand string `json:"build_command"`
-	RunCommand   string `json:"run_command`
+	RunCommand   string `json:"run_command"`
 	// Testcases []any `json:"testcases"`
 	/*
 		{
@@ -289,4 +290,128 @@ func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challen
 	}
 
 	return nil
+}
+
+func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string) (string, error) {
+	chal, err := GetChallenge(c, lesson_id, slide_id)
+	if err != nil {
+		return "", err
+	}
+	var resource_string = fmt.Sprintf("resource \"edstem_challenge\" %s {\n", resource_name)
+	resource_string = resource_string + fmt.Sprintf("\tslide_id = %d\n", slide_id)
+	resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", lesson_id)
+
+	if chal.Explanation != "" {
+		if strings.Contains(chal.Explanation, "\n") {
+			resource_string = resource_string + fmt.Sprintf("\texplanation = <<EOT\n%s\nEOT\n", chal.Explanation)
+		} else {
+			resource_string = resource_string + fmt.Sprintf("\texplanation = \"%s\"\n", chal.Explanation)
+		}
+	}
+
+	var repos = []string{"scaffold", "solution", "testbase"}
+
+	for _, repo := range repos {
+		err = wshelpers.ReadChallengeRepo(c, chal.Id, folder_path, repo)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	resource_string = resource_string + fmt.Sprintf("\tfolder_path = \"%s\"\n", folder_path)
+	resource_string = resource_string + fmt.Sprintf("\tfolder_sha = sha1(join(\"\", [for f in fileset(path.cwd, \"%s/**\"): filesha1(\"${path.cwd}/${f}\")]))\n", folder_path)
+	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", chal.Type)
+
+	if chal.Settings.BuildCommand != "" {
+		resource_string = resource_string + fmt.Sprintf("\tbuild_command = \"%s\"\n", chal.Settings.BuildCommand)
+	}
+	if chal.Settings.RunCommand != "" {
+		resource_string = resource_string + fmt.Sprintf("\trun_command = \"%s\"\n", chal.Settings.RunCommand)
+	}
+	if chal.Settings.CheckCommand != "" {
+		resource_string = resource_string + fmt.Sprintf("\ttest_command = \"%s\"\n", chal.Settings.CheckCommand)
+	}
+	if chal.Settings.TerminalCommand != "" {
+		resource_string = resource_string + fmt.Sprintf("\tterminal_command = \"%s\"\n", chal.Settings.TerminalCommand)
+	}
+
+	if chal.Tickets.MarkCustom.RunCommand != "" {
+		resource_string = resource_string + fmt.Sprintf("\tcustom_run_command = \"%s\"\n", chal.Tickets.MarkCustom.RunCommand)
+	}
+
+	if chal.Settings.PerTestCaseScores {
+		resource_string = resource_string + fmt.Sprintf("\tper_testcase_scores = %t\n", chal.Settings.PerTestCaseScores)
+	}
+	if chal.Settings.MaxSubmissionsPerInterval != 0 {
+		resource_string = resource_string + fmt.Sprintf("\tmax_submissions_per_interval = %d\n", chal.Settings.MaxSubmissionsPerInterval)
+	}
+	if chal.Settings.AttemptLimitInterval != 0 {
+		resource_string = resource_string + fmt.Sprintf("\tattempt_limit_interval = %d\n", chal.Settings.AttemptLimitInterval)
+	}
+	if chal.Settings.OnlyGitSubmission {
+		resource_string = resource_string + fmt.Sprintf("\tonly_git_submission = %t\n", chal.Settings.OnlyGitSubmission)
+	}
+	if chal.Settings.AllowSubmitAfterMarkingLimit {
+		resource_string = resource_string + fmt.Sprintf("\tallow_submit_after_marking_limit = %t\n", chal.Settings.AllowSubmitAfterMarkingLimit)
+	}
+	if chal.Settings.Passback.ScoringMode != "" {
+		resource_string = resource_string + fmt.Sprintf("\tpassback_scoring_mode = \"%s\"\n", chal.Settings.Passback.ScoringMode)
+	}
+	if chal.Settings.Passback.MaxAutomaticScore != 0 {
+		resource_string = resource_string + fmt.Sprintf("\tpassback_max_automatic_score = %f\n", chal.Settings.Passback.MaxAutomaticScore)
+	}
+	if chal.Settings.Passback.ScaleTo != 0 {
+		resource_string = resource_string + fmt.Sprintf("\tpassback_max_automatic_score = %f\n", chal.Settings.Passback.ScaleTo)
+	}
+
+	if !chal.Features.Run {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_run = %t\n", chal.Features.Run)
+	}
+	if !chal.Features.Check {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_check = %t\n", chal.Features.Check)
+	}
+	if !chal.Features.Mark {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_mark = %t\n", chal.Features.Mark)
+	}
+	if !chal.Features.Terminal {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_terminal = %t\n", chal.Features.Terminal)
+	}
+	if !chal.Features.Feedback {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_feedback = %t\n", chal.Features.Feedback)
+	}
+	if chal.Features.ManualCompletion {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_manual_completion = %t\n", chal.Features.ManualCompletion)
+	}
+	if chal.Features.AnonymousSubmissions {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_anonymous_submissions = %t\n", chal.Features.AnonymousSubmissions)
+	}
+	if chal.Features.Arguments {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_arguments = %t\n", chal.Features.Arguments)
+	}
+	if chal.Features.ConfirmSubmit {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_confirm_submit = %t\n", chal.Features.ConfirmSubmit)
+	}
+	if chal.Features.RunBeforeSubmit {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_run_before_submit = %t\n", chal.Features.RunBeforeSubmit)
+	}
+	if chal.Features.GitSubmission {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_git_submission = %t\n", chal.Features.GitSubmission)
+	}
+	if !chal.Features.Editor {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_editor = %t\n", chal.Features.Editor)
+	}
+	if chal.Features.RemoteDesktop {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_remote_desktop = %t\n", chal.Features.RemoteDesktop)
+	}
+	if chal.Features.IntermediateFiles {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_intermediate_files = %t\n", chal.Features.IntermediateFiles)
+	}
+	chal.Tickets.MarkCustom.RunLimit.CpuTime.If(func(val int64) {
+		resource_string = resource_string + fmt.Sprintf("\tcustom_mark_time_limit_ms = %d\n", val)
+	})
+
+	// TODO: Rubrics and Test cases
+	resource_string = resource_string + "}"
+
+	return resource_string, nil
 }
