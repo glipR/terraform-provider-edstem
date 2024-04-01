@@ -9,6 +9,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 )
 
 func renderEmphasis(w io.Writer, p *ast.Emph, entering bool) {
@@ -27,11 +28,29 @@ func renderStrong(w io.Writer, p *ast.Strong, entering bool) {
 	}
 }
 
-func renderParagraph(w io.Writer, p *ast.Paragraph, entering bool) {
+func renderParagraph(w io.Writer, p *ast.Paragraph, entering bool, attribute *ast.Attribute) {
+	mode := "paragraph"
+	callout_type := "info"
+	if attribute != nil {
+		for _, class := range attribute.Classes {
+			if string(class) == "callout" {
+				mode = "callout"
+				callout_type = string(attribute.Attrs["type"])
+			}
+		}
+	}
 	if entering {
-		io.WriteString(w, "<paragraph>")
+		if mode == "paragraph" {
+			io.WriteString(w, "<paragraph>")
+		} else {
+			io.WriteString(w, fmt.Sprintf("<callout type=\"%s\">", callout_type))
+		}
 	} else {
-		io.WriteString(w, "</paragraph>")
+		if mode == "paragraph" {
+			io.WriteString(w, "</paragraph>")
+		} else {
+			io.WriteString(w, "</callout>")
+		}
 	}
 }
 
@@ -88,7 +107,7 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 		return ast.GoToNext, true
 	}
 	if para, ok := node.(*ast.Paragraph); ok {
-		renderParagraph(w, para, entering)
+		renderParagraph(w, para, entering, para.AsContainer().Attribute)
 		return ast.GoToNext, true
 	}
 	if heading, ok := node.(*ast.Heading); ok {
@@ -117,7 +136,9 @@ func RenderMDToEd(content string) string {
 		RenderNodeHook: customHTMLRenderHook,
 	}
 	renderer := html.NewRenderer(opts)
-	html := markdown.ToHTML([]byte(content), nil, renderer)
+	extensions := parser.CommonExtensions
+	p := parser.NewWithExtensions(extensions | parser.Attributes)
+	html := markdown.ToHTML([]byte(content), p, renderer)
 
 	return "<document version=\"2.0\">" + strings.Replace(string(html), "\r", "", -1) + "</document>"
 }

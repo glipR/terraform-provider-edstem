@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	"path"
 
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/md2ed"
 	"terraform-provider-edstem/internal/wshelpers"
 
 	"github.com/markphelps/optional"
@@ -302,11 +303,13 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 	resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", lesson_id)
 
 	if chal.Explanation != "" {
-		if strings.Contains(chal.Explanation, "\n") {
-			resource_string = resource_string + fmt.Sprintf("\texplanation = <<EOT\n%s\nEOT\n", chal.Explanation)
-		} else {
-			resource_string = resource_string + fmt.Sprintf("\texplanation = \"%s\"\n", chal.Explanation)
+		content_path := path.Join(folder_path, "explanation.md")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
 		}
+		f.WriteString(md2ed.RenderEdToMD(chal.Explanation))
+		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
 
 	var repos = []string{"scaffold", "solution", "testbase"}

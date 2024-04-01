@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/md2ed"
 
 	"github.com/markphelps/optional"
 )
@@ -207,13 +208,12 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 	if slide.IsHidden {
 		resource_string = resource_string + fmt.Sprintf("\tis_hidden = %t\n", slide.IsHidden)
 	}
-	// TODO: Turn back into md.
 	content_path := path.Join(folder_path, "content.md")
 	f, e := os.Create(content_path)
 	if e != nil {
 		return "", e
 	}
-	f.WriteString(slide.Content)
+	f.WriteString(md2ed.RenderEdToMD(slide.Content))
 	resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	resource_string = resource_string + "}"
 

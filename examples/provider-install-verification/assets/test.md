@@ -23,3 +23,6 @@ print("YES?")
 ```go.runnable="false".line-numbers="true"
 fmt.Print("HELLO 123")
 ```
+
+{.callout type="info"}
+Info paragraph about **stuff**, and [things](https://google.com)
