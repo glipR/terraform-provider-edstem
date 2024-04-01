@@ -374,6 +374,7 @@ func (r *lessonResource) Create(ctx context.Context, req resource.CreateRequest,
 	resourceclients.CreateLesson(r.client, &api_obj)
 
 	plan.Id = types.Int64Value(int64(api_obj.Id))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC1123Z))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

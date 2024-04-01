@@ -2,9 +2,12 @@ package md2ed
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"terraform-provider-edstem/internal/client"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
@@ -59,6 +62,34 @@ func renderHeading(w io.Writer, p *ast.Heading, entering bool) {
 		io.WriteString(w, fmt.Sprintf("<heading level=\"%d\">", p.Level))
 	} else {
 		io.WriteString(w, "</heading>")
+	}
+}
+
+func renderLink(w io.Writer, p *ast.Link, entering bool) {
+	if entering {
+		io.WriteString(w, fmt.Sprintf("<link href=\"%s\">", strings.ReplaceAll(string(p.Destination), "&", "&amp;")))
+	} else {
+		io.WriteString(w, "</link>")
+	}
+}
+
+func renderList(w io.Writer, p *ast.List, entering bool) {
+	if entering {
+		style := "bullet"
+		if p.ListFlags == ast.ListTypeOrdered {
+			style = "number"
+		}
+		io.WriteString(w, fmt.Sprintf("<list style=\"%s\">", style))
+	} else {
+		io.WriteString(w, "</list>")
+	}
+}
+
+func renderListItem(w io.Writer, p *ast.ListItem, entering bool) {
+	if entering {
+		io.WriteString(w, "<list-item>")
+	} else {
+		io.WriteString(w, "</list-item>")
 	}
 }
 
@@ -126,13 +157,25 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 		renderMathBlock(w, math, entering)
 		return ast.GoToNext, true
 	}
+	if link, ok := node.(*ast.Link); ok {
+		renderLink(w, link, entering)
+		return ast.GoToNext, true
+	}
+	if list, ok := node.(*ast.List); ok {
+		renderList(w, list, entering)
+		return ast.GoToNext, true
+	}
+	if listitem, ok := node.(*ast.ListItem); ok {
+		renderListItem(w, listitem, entering)
+		return ast.GoToNext, true
+	}
 	return ast.GoToNext, false
 }
 
 func RenderMDToEd(content string) string {
 
 	opts := html.RendererOptions{
-		Flags:          html.CommonFlags,
+		Flags:          html.FlagsNone,
 		RenderNodeHook: customHTMLRenderHook,
 	}
 	renderer := html.NewRenderer(opts)
@@ -140,5 +183,5 @@ func RenderMDToEd(content string) string {
 	p := parser.NewWithExtensions(extensions | parser.Attributes)
 	html := markdown.ToHTML([]byte(content), p, renderer)
 
-	return "<document version=\"2.0\">" + strings.Replace(string(html), "\r", "", -1) + "</document>"
+	return "<document version=\"2.0\">" + strings.ReplaceAll(string(html), "\r", "") + "</document>"
 }

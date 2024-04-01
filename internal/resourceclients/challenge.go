@@ -32,6 +32,7 @@ type ChallengeFeatures struct {
 	Check                bool `json:"check"`
 	Mark                 bool `json:"mark"`
 	Terminal             bool `json:"terminal"`
+	Connect              bool `json:"connect"`
 	Feedback             bool `json:"feedback"`
 	ManualCompletion     bool `json:"manual_completion"`
 	AnonymousSubmissions bool `json:"anonymous_submissions"`
@@ -197,6 +198,7 @@ type ChallengeResource struct {
 
 	Run                  bool `json:"feature_run"`
 	Check                bool `json:"feature_check"`
+	Connect              bool `json:"feature_connect"`
 	Mark                 bool `json:"feature_mark"`
 	Terminal             bool `json:"feature_terminal"`
 	Feedback             bool `json:"feature_feedback"`
@@ -279,12 +281,6 @@ func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challen
 	if err != nil {
 		return err
 	}
-	f, f_err := os.Create("data2.json")
-	if f_err != nil {
-		return f_err
-	}
-	f.Write(buf.Bytes())
-	f.Close()
 	_, patch_err := conn.HTTPRequest(fmt.Sprintf("challenges/%d", challenge.Id), "PATCH", buf, nil)
 	if patch_err != nil {
 		return patch_err
@@ -293,14 +289,22 @@ func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challen
 	return nil
 }
 
-func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string) (string, error) {
+func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, slide_resource_name *string, lesson_resource_name *string) (string, error) {
 	chal, err := GetChallenge(c, lesson_id, slide_id)
 	if err != nil {
 		return "", err
 	}
 	var resource_string = fmt.Sprintf("resource \"edstem_challenge\" %s {\n", resource_name)
-	resource_string = resource_string + fmt.Sprintf("\tslide_id = %d\n", slide_id)
-	resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", lesson_id)
+	if slide_resource_name != nil {
+		resource_string = resource_string + fmt.Sprintf("\tslide_id = edstem_slide.%s.id\n", *slide_resource_name)
+	} else {
+		resource_string = resource_string + fmt.Sprintf("\tslide_id = %d\n", slide_id)
+	}
+	if lesson_resource_name != nil {
+		resource_string = resource_string + fmt.Sprintf("\tlesson_id = edstem_lesson.%s.id\n", *lesson_resource_name)
+	} else {
+		resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", lesson_id)
+	}
 
 	if chal.Explanation != "" {
 		content_path := path.Join(folder_path, "explanation.md")
@@ -375,6 +379,9 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 	}
 	if !chal.Features.Mark {
 		resource_string = resource_string + fmt.Sprintf("\tfeature_mark = %t\n", chal.Features.Mark)
+	}
+	if !chal.Features.Connect {
+		resource_string = resource_string + fmt.Sprintf("\tfeature_connect = %t\n", chal.Features.Connect)
 	}
 	if !chal.Features.Terminal {
 		resource_string = resource_string + fmt.Sprintf("\tfeature_terminal = %t\n", chal.Features.Terminal)

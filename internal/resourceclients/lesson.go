@@ -139,6 +139,7 @@ func CreateLesson(c *client.Client, lesson *Lesson) error {
 	if err != nil {
 		return err
 	}
+	lesson.Id = resp_lesson.LessonObj.Id
 	return UpdateLesson(c, lesson)
 }
 
@@ -273,7 +274,7 @@ func LessonToTerraform(c *client.Client, lesson_id int, resource_name string, fo
 		if e != nil {
 			return "", nil
 		}
-		new_string, slide_err := SlideToTerraform(c, lesson_id, slide_ids[i], fmt.Sprintf("%s_slide_%d", resource_name, i), slide_path)
+		new_string, slide_err := SlideToTerraform(c, lesson_id, slide_ids[i], fmt.Sprintf("%s_slide_%d", resource_name, i), slide_path, &resource_name)
 		if slide_err != nil {
 			return "", slide_err
 		}
@@ -281,4 +282,21 @@ func LessonToTerraform(c *client.Client, lesson_id int, resource_name string, fo
 	}
 
 	return resource_string, nil
+}
+
+func CourseToTerraform(c *client.Client, folder_path string) (string, error) {
+	lessons, err := GetLessons(c)
+	if err != nil {
+		return "", err
+	}
+	lesson_terraform_blocks := make([]string, 0)
+	for i, lesson := range lessons {
+		lesson_path := fmt.Sprintf("lesson_%d", i)
+		res, e := LessonToTerraform(c, lesson.Id, lesson_path, path.Join(folder_path, lesson_path))
+		if e != nil {
+			return "", e
+		}
+		lesson_terraform_blocks = append(lesson_terraform_blocks, res)
+	}
+	return strings.Join(lesson_terraform_blocks, "\n\n\n"), nil
 }

@@ -91,6 +91,7 @@ type challengeResourceModel struct {
 	Check                types.Bool `tfsdk:"feature_check"`
 	Mark                 types.Bool `tfsdk:"feature_mark"`
 	Terminal             types.Bool `tfsdk:"feature_terminal"`
+	Connect              types.Bool `tfsdk:"feature_connect"`
 	Feedback             types.Bool `tfsdk:"feature_feedback"`
 	ManualCompletion     types.Bool `tfsdk:"feature_manual_completion"`
 	AnonymousSubmissions types.Bool `tfsdk:"feature_anonymous_submissions"`
@@ -211,6 +212,11 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional: true,
 				Computed: true,
 			},
+			"feature_connect": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(true),
+				Optional: true,
+				Computed: true,
+			},
 			"feature_feedback": schema.BoolAttribute{
 				Default:  booldefault.StaticBool(true),
 				Optional: true,
@@ -287,6 +293,7 @@ func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *clie
 	chal.Features.Run = model.Run.ValueBool()
 	chal.Features.Check = model.Check.ValueBool()
 	chal.Features.Mark = model.Mark.ValueBool()
+	chal.Features.Connect = model.Connect.ValueBool()
 	chal.Features.Terminal = model.Terminal.ValueBool()
 	chal.Features.Feedback = model.Feedback.ValueBool()
 	chal.Features.ManualCompletion = model.ManualCompletion.ValueBool()

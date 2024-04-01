@@ -19,11 +19,9 @@ func resolveNodes(n *html.Node) string {
 		if n.Data == "html" {
 			// Nothing other than head and body
 			combinator = ""
-		}
-		if n.Data == "paragraph" {
+		} else if n.Data == "paragraph" {
 			combinator = ""
-		}
-		if n.Data == "callout" {
+		} else if n.Data == "callout" {
 			callout_type := ""
 			for _, attr := range n.Attr {
 				if attr.Key == "type" {
@@ -32,8 +30,7 @@ func resolveNodes(n *html.Node) string {
 			}
 			blocks = append(blocks, fmt.Sprintf("{.callout type=\"%s\"}\n", callout_type))
 			combinator = ""
-		}
-		if n.Data == "a" {
+		} else if n.Data == "a" {
 			link_value := ""
 			for _, attr := range n.Attr {
 				if attr.Key == "href" {
@@ -41,39 +38,30 @@ func resolveNodes(n *html.Node) string {
 				}
 			}
 			return fmt.Sprintf("[%s](%s)", n.FirstChild.Data, link_value)
-		}
-		if n.Data == "list" {
+		} else if n.Data == "list" {
 			combinator = "\n"
-		}
-		if n.Data == "list-item" {
+		} else if n.Data == "list-item" {
 			blocks = append(blocks, "* ")
 			combinator = ""
-		}
-		if n.Data == "break" {
+		} else if n.Data == "break" {
 			return "\n"
-		}
-
-		if n.Data == "bold" {
+		} else if n.Data == "bold" {
 			combinator = ""
 			blocks = append(blocks, "**")
 			endblocks = append(endblocks, "**")
-		}
-		if n.Data == "italic" {
+		} else if n.Data == "italic" {
 			combinator = ""
 			blocks = append(blocks, "*")
 			endblocks = append(endblocks, "*")
-		}
-		if n.Data == "underline" {
+		} else if n.Data == "underline" {
 			combinator = ""
 			blocks = append(blocks, "<underline>")
 			endblocks = append(endblocks, "</underline>")
-		}
-		if n.Data == "code" {
+		} else if n.Data == "code" {
 			combinator = ""
 			blocks = append(blocks, "`")
 			endblocks = append(endblocks, "`")
-		}
-		if n.Data == "heading" {
+		} else if n.Data == "heading" {
 			level := 1
 			for _, attr := range n.Attr {
 				if attr.Key == "level" {
@@ -85,13 +73,11 @@ func resolveNodes(n *html.Node) string {
 				blocks = append(blocks, "#")
 			}
 			blocks = append(blocks, " ")
-		}
-		if n.Data == "pre" {
+		} else if n.Data == "pre" {
 			combinator = ""
 			blocks = append(blocks, "```\n")
 			endblocks = append(endblocks, "```")
-		}
-		if n.Data == "snippet" {
+		} else if n.Data == "snippet" {
 			extras := make([]string, 0)
 			language := ""
 			for _, attr := range n.Attr {
@@ -104,6 +90,10 @@ func resolveNodes(n *html.Node) string {
 			combinator = "\n"
 			blocks = append(blocks, fmt.Sprintf("```%s%s", language, strings.Join(extras, "")))
 			endblocks = append(endblocks, "```")
+		} else if n.Data == "head" || n.Data == "body" || n.Data == "document" {
+			// Nothing
+		} else {
+			fmt.Println("Unhandled node element", n.Data, " has parent ", n.Parent.Data)
 		}
 	}
 	if n.Type == html.TextNode {
