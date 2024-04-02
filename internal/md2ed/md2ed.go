@@ -183,5 +183,5 @@ func RenderMDToEd(content string) string {
 	p := parser.NewWithExtensions(extensions | parser.Attributes)
 	html := markdown.ToHTML([]byte(content), p, renderer)
 
-	return "<document version=\"2.0\">" + strings.ReplaceAll(string(html), "\r", "") + "</document>"
+	return "<document version=\"2.0\">" + strings.ReplaceAll(strings.ReplaceAll(string(html), "\r", ""), "\n", "") + "</document>"
 }

@@ -9,12 +9,16 @@ import (
 )
 
 func resolveNodes(n *html.Node) string {
+	preblocks := make([]string, 0)
 	blocks := make([]string, 0)
 	endblocks := make([]string, 0)
 	combinator := "\n\n"
 	/*if n.Parent != nil {
 		fmt.Println(n.Parent.Data, "->", n.Data)
 	}*/
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		blocks = append(blocks, resolveNodes(c))
+	}
 	if n.Type == html.ElementNode {
 		if n.Data == "html" {
 			// Nothing other than head and body
@@ -28,7 +32,7 @@ func resolveNodes(n *html.Node) string {
 					callout_type = attr.Val
 				}
 			}
-			blocks = append(blocks, fmt.Sprintf("{.callout type=\"%s\"}\n", callout_type))
+			preblocks = append(preblocks, fmt.Sprintf("{.callout type=\"%s\"}\n", callout_type))
 			combinator = ""
 		} else if n.Data == "a" {
 			link_value := ""
@@ -41,25 +45,25 @@ func resolveNodes(n *html.Node) string {
 		} else if n.Data == "list" {
 			combinator = "\n"
 		} else if n.Data == "list-item" {
-			blocks = append(blocks, "* ")
+			preblocks = append(preblocks, "* ")
 			combinator = ""
 		} else if n.Data == "break" {
 			return "\n"
 		} else if n.Data == "bold" {
 			combinator = ""
-			blocks = append(blocks, "**")
+			preblocks = append(preblocks, "**")
 			endblocks = append(endblocks, "**")
 		} else if n.Data == "italic" {
 			combinator = ""
-			blocks = append(blocks, "*")
+			preblocks = append(preblocks, "*")
 			endblocks = append(endblocks, "*")
 		} else if n.Data == "underline" {
 			combinator = ""
-			blocks = append(blocks, "<underline>")
+			preblocks = append(preblocks, "<underline>")
 			endblocks = append(endblocks, "</underline>")
 		} else if n.Data == "code" {
 			combinator = ""
-			blocks = append(blocks, "`")
+			preblocks = append(preblocks, "`")
 			endblocks = append(endblocks, "`")
 		} else if n.Data == "heading" {
 			level := 1
@@ -70,12 +74,12 @@ func resolveNodes(n *html.Node) string {
 			}
 			combinator = ""
 			for i := 0; i < level; i++ {
-				blocks = append(blocks, "#")
+				preblocks = append(preblocks, "#")
 			}
-			blocks = append(blocks, " ")
+			preblocks = append(preblocks, " ")
 		} else if n.Data == "pre" {
 			combinator = ""
-			blocks = append(blocks, "```\n")
+			preblocks = append(preblocks, "```\n")
 			endblocks = append(endblocks, "```")
 		} else if n.Data == "snippet" {
 			extras := make([]string, 0)
@@ -88,10 +92,29 @@ func resolveNodes(n *html.Node) string {
 				}
 			}
 			combinator = "\n"
-			blocks = append(blocks, fmt.Sprintf("```%s%s", language, strings.Join(extras, "")))
+			preblocks = append(preblocks, fmt.Sprintf("```%s%s", language, strings.Join(extras, "")))
 			endblocks = append(endblocks, "```")
-		} else if n.Data == "head" || n.Data == "body" || n.Data == "document" {
+		} else if n.Data == "head" || n.Data == "body" || n.Data == "document" || n.Data == "snippet-file" {
 			// Nothing
+		} else if n.Data == "table" {
+			// This should contain a `thead` child which tells us how many columns.
+			combinator = "\n"
+			preblocks = append(preblocks, blocks[0])
+			blocks = blocks[1:]
+			bar_count := strings.Count(preblocks[len(preblocks)-1], "|")
+			bars := make([]string, 0)
+			for i := 1; i < bar_count; i++ {
+				bars = append(bars, "---")
+			}
+			preblocks = append(preblocks, "|"+strings.Join(bars, "|")+"|")
+		} else if n.Data == "thead" || n.Data == "tbody" {
+			combinator = "\n"
+		} else if n.Data == "tr" {
+			preblocks = append(preblocks, "")
+			endblocks = append(endblocks, "")
+			combinator = "|"
+		} else if n.Data == "td" || n.Data == "th" {
+			combinator = ""
 		} else {
 			fmt.Println("Unhandled node element", n.Data, " has parent ", n.Parent.Data)
 		}
@@ -99,9 +122,7 @@ func resolveNodes(n *html.Node) string {
 	if n.Type == html.TextNode {
 		return n.Data
 	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		blocks = append(blocks, resolveNodes(c))
-	}
+	blocks = append(preblocks, blocks...)
 	blocks = append(blocks, endblocks...)
 	return strings.Join(blocks, combinator)
 }
