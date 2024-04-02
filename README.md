@@ -35,14 +35,18 @@ go run main.go import_tf course my_course -c 12108
 
 ## Currently not functional components
 
-* Destroying objects
-* Reading current state for diff
-* Question types other than Multi-Choice
-* Code Challenge Rubrics
-* Static Test Cases
-* Code Challenges that aren't `none`, `custom` or `code`.
-* Code Challenges that aren't python
-* Images in content
+* Terraform Actions:
+    * Destroying objects
+    * Reading current state for diff
+* Slides
+    * PDF, Video, Webpage Embed, Custom HTML, Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
+    * Question types other than Multi-Choice
+    * Code Challenges that aren't `none`, `custom` or `code`.
+    * Static Test Cases in Input/Output code challenges
+    * Code Challenge Rubrics
+* Misc
+    * Images in content
+
 
 ## Cautionary areas
 
