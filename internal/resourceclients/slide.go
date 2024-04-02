@@ -188,7 +188,7 @@ func CreateSlide(c *client.Client, slide *Slide) error {
 	return UpdateSlide(c, slide)
 }
 
-func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string) (string, error) {
+func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, parent_resource_name *string) (string, error) {
 	slide, err := GetSlide(c, lesson_id, slide_id)
 	if err != nil {
 		return "", err
@@ -202,7 +202,11 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 	var resource_string = fmt.Sprintf("resource \"edstem_slide\" %s {\n", resource_name)
 	resource_string = resource_string + fmt.Sprintf("\tid = %d\n", slide.Id)
 	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", slide.Type)
-	resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", slide.LessonId)
+	if parent_resource_name != nil {
+		resource_string = resource_string + fmt.Sprintf("\tlesson_id = edstem_lesson.%s.id\n", *parent_resource_name)
+	} else {
+		resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", slide.LessonId)
+	}
 	resource_string = resource_string + fmt.Sprintf("\ttitle = \"%s\"\n", slide.Title)
 	resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", slide.Index)
 	if slide.IsHidden {
@@ -218,7 +222,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 	resource_string = resource_string + "}"
 
 	if slide.Type == "code" {
-		s, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path)
+		s, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path, &resource_name, parent_resource_name)
 		if e != nil {
 			return "", nil
 		}
