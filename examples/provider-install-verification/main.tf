@@ -125,6 +125,14 @@ resource "edstem_question" "question2" {
     question_document_string = file("assets/question2.md")
 }
 
+resource "edstem_slide" "slide5" {
+    type = "pdf"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - PDF"
+    index = 4
+    file_path = "assets/test.pdf"
+}
+
 output "edu_lessons" {
     value = data.edstem_lesson.example
 }

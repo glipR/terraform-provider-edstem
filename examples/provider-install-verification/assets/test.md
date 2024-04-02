@@ -26,9 +26,3 @@ fmt.Print("HELLO 123")
 
 {.callout type="info"}
 Info paragraph about **stuff**, and [things](https://google.com)
-
-|test1|*test2*|**test3**|
-|---|---|---|
-|`x`|`why`|`z`|
-|a|b|c|
-

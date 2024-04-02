@@ -66,6 +66,7 @@ type slideResourceModel struct {
 	IsHidden    types.Bool   `tfsdk:"is_hidden"`
 	Content     types.String `tfsdk:"content"`
 	ContentType types.String `tfsdk:"content_type"`
+	FilePath    types.String `tfsdk:"file_path"`
 }
 
 // Schema defines the schema for the resource.
@@ -97,12 +98,19 @@ func (r *slideResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed: true,
 			},
 			"content": schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
 			},
 			"content_type": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
 				Default:  stringdefault.StaticString("md"),
+			},
+			"file_path": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
 			},
 		},
 	}
@@ -122,6 +130,7 @@ func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*resourceclient
 		obj.Content = md2ed.RenderMDToEd(obj.Content)
 		fmt.Print(obj.Content)
 	}
+	obj.FileUrl.Set(model.FilePath.ValueString())
 	return &obj, nil
 }
 

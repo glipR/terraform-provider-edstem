@@ -25,6 +25,7 @@ type Slide struct {
 	CourseId    int             `json:"course_id"`
 	UserId      int             `json:"user_id"`
 	ChallengeId optional.Int    `json:"challenge_id"`
+	FileUrl     optional.String `json:"file_url"`
 }
 
 type SlideResponse struct {
@@ -42,6 +43,7 @@ type SlideResponse struct {
 	RubricPoints optional.Int    `json:"rubric_points"`
 	AutoPoints   optional.Int    `json:"auto_points"`
 	ChallengeId  optional.Int    `json:"challenge_id"`
+	FileUrl      optional.String `json:"file_url"`
 }
 
 type SlideCreateRequest struct {
@@ -137,10 +139,24 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 	if err != nil {
 		return err
 	}
-	boundary := fmt.Sprintf("-----------------------------%s", "28191803313191638583308257490")
-	req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"slide\"\n\n%s--%s--\n", boundary, buf.String(), boundary)
-	actual_req := bytes.Buffer{}
-	actual_req.Write([]byte(req_text))
+	var boundary string
+	var actual_req bytes.Buffer
+	if slide.Type != "pdf" {
+		boundary = fmt.Sprintf("-----------------------------%s", "28191803313191638583308257490")
+		req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"slide\"\n\n%s--%s--\n", boundary, buf.String(), boundary)
+		actual_req = bytes.Buffer{}
+		actual_req.Write([]byte(req_text))
+	} else {
+		boundary = fmt.Sprintf("-----------------------------%s", "303367121714237365713833509663")
+		filename := slide.FileUrl.MustGet()
+		filedata, err := os.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+		req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: application/pdf\n\n%s\n\n--%s\nContent-Disposition: form-data; name=\"slide\"\n\n%s--%s--\n", boundary, filename, filedata, boundary, buf.String(), boundary)
+		actual_req = bytes.Buffer{}
+		actual_req.Write([]byte(req_text))
+	}
 
 	body, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d", slide.Id), "PUT", actual_req, &boundary)
 	if err != nil {
@@ -154,6 +170,12 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 	slide.Id = resp_lesson.Slide.Id
 	return err
 }
+
+// The three lines
+//-----------------------------303367121714237365713833509663
+//-----------------------------303367121714237365713833509663
+//-----------------------------303367121714237365713833509663--
+//---------------------------303367121714237365713833509663
 
 func CreateSlide(c *client.Client, slide *Slide) error {
 	request := &SlideCreateRequest{}
