@@ -1,7 +1,53 @@
+# terraform-provider-edstem
+
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
 - [Go](https://golang.org/doc/install) >= 1.19
+
+## How do I use?
+
+Include the following snippet in the `require_providers` block of your terraform code:
+
+```
+terraform {
+  required_providers {
+    edstem = {
+      source = "hashicorp.com/edu/edstem"
+    }
+  }
+}
+```
+
+## How do I import existing Ed lessons etc. into my terraform?
+
+You'll need to invoke this module yourself (TODO: Add what this script is for people installing the package)
+
+```
+// Make a new directory for terraform
+mkdir my_course
+// Specify what resources you'd like to bring through (and everything more granular)
+// This one just grabs lesson 36778 from course 12108
+go run main.go import_tf lesson my_course -c 12108 -l 36778
+// This one grabs all lessons from course 12108
+go run main.go import_tf course my_course -c 12108
+```
+
+## Currently not functional components
+
+* Destroying objects
+* Reading current state for diff
+* Question types other than Multi-Choice
+* Code Challenge Rubrics
+* Static Test Cases
+* Code Challenges that aren't `none`, `custom` or `code`.
+* Code Challenges that aren't python
+* Images in content
+
+## Cautionary areas
+
+* Ed/MD rendering hasn't been rigorously tested
+* Some minor elements of the challenges api aren't fully understood, so some minor differences may occur when importing/re-applying.
 
 ## Development Notes
 
