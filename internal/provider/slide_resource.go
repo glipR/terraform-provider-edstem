@@ -143,6 +143,8 @@ func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*resourceclient
 		if !model.Url.IsNull() {
 			obj.Url.Set(model.Url.ValueString())
 		}
+	} else if model.Type.ValueString() == "html" {
+		obj.Html.Set(model.Content.ValueString())
 	}
 	return &obj, nil
 }

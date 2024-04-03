@@ -68,7 +68,7 @@ resource "edstem_slide" "slide4" {
     type = "code"
     lesson_id = edstem_lesson.testing.id
     title = "Terraform Slide - Code Input Output Marking"
-    index = 3
+    index = 4
     content = "Description content"
 }
 
@@ -129,7 +129,7 @@ resource "edstem_slide" "slide5" {
     type = "pdf"
     lesson_id = edstem_lesson.testing.id
     title = "Terraform Slide - PDF"
-    index = 4
+    index = 5
     file_path = "assets/test.pdf"
 }
 
@@ -137,7 +137,7 @@ resource "edstem_slide" "slide6" {
     type = "video"
     lesson_id = edstem_lesson.testing.id
     title = "Terraform Slide - Video"
-    index = 5
+    index = 6
     url = "https://www.youtube.com/watch?v=feIeCR6oFNM"
 }
 
@@ -145,8 +145,16 @@ resource "edstem_slide" "slide7" {
     type = "webpage"
     lesson_id = edstem_lesson.testing.id
     title = "Terraform Slide - Webpage"
-    index = 6
+    index = 7
     url = "https://www.google.com/"
+}
+
+resource "edstem_slide" "slide8" {
+    type = "html"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - HTML"
+    index = 8
+    content = "<h1>TEST</h1>"
 }
 
 output "edu_lessons" {

@@ -28,6 +28,7 @@ type Slide struct {
 	FileUrl     optional.String `json:"file_url"`
 	VideoUrl    optional.String `json:"video_url"`
 	Url         optional.String `json:"url"`
+	Html        optional.String `json:"html"`
 }
 
 type SlideResponse struct {
@@ -48,6 +49,7 @@ type SlideResponse struct {
 	FileUrl      optional.String `json:"file_url"`
 	VideoUrl     optional.String `json:"video_url"`
 	Url          optional.String `json:"url"`
+	Html         optional.String `json:"html"`
 }
 
 type SlideCreateRequest struct {
@@ -68,6 +70,7 @@ type SlideUpdateRequest struct {
 	AutoPoints   optional.Int    `json:"auto_points"`
 	VideoUrl     optional.String `json:"video_url"`
 	Url          optional.String `json:"url"`
+	Html         optional.String `json:"html"`
 }
 
 type LessonWithSlidesResponse struct {
@@ -142,6 +145,7 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 	request.UserId = slide.UserId
 	slide.VideoUrl.If(func(val string) { request.VideoUrl.Set(val) })
 	slide.Url.If(func(val string) { request.Url.Set(val) })
+	slide.Html.If(func(val string) { request.Html.Set(val) })
 	buf := bytes.Buffer{}
 	err := json.NewEncoder(&buf).Encode(request)
 	if err != nil {
@@ -254,14 +258,26 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 				resource_string = resource_string + fmt.Sprintf("\turl = \"%s\"\n", val)
 			}
 		})
+	} else if slide.Type == "html" {
+		if slide.Html.Present() {
+			content_path := path.Join(folder_path, "content.html")
+			f, e := os.Create(content_path)
+			if e != nil {
+				return "", e
+			}
+			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet()))
+			resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
+		}
 	}
-	content_path := path.Join(folder_path, "content.md")
-	f, e := os.Create(content_path)
-	if e != nil {
-		return "", e
+	if slide.Content != "" {
+		content_path := path.Join(folder_path, "content.md")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
+		}
+		f.WriteString(md2ed.RenderEdToMD(slide.Content))
+		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
-	f.WriteString(md2ed.RenderEdToMD(slide.Content))
-	resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	resource_string = resource_string + "}"
 
 	if slide.Type == "code" {
