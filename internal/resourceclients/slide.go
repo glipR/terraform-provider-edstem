@@ -26,6 +26,8 @@ type Slide struct {
 	UserId      int             `json:"user_id"`
 	ChallengeId optional.Int    `json:"challenge_id"`
 	FileUrl     optional.String `json:"file_url"`
+	VideoUrl    optional.String `json:"video_url"`
+	Url         optional.String `json:"url"`
 }
 
 type SlideResponse struct {
@@ -44,6 +46,8 @@ type SlideResponse struct {
 	AutoPoints   optional.Int    `json:"auto_points"`
 	ChallengeId  optional.Int    `json:"challenge_id"`
 	FileUrl      optional.String `json:"file_url"`
+	VideoUrl     optional.String `json:"video_url"`
+	Url          optional.String `json:"url"`
 }
 
 type SlideCreateRequest struct {
@@ -51,17 +55,19 @@ type SlideCreateRequest struct {
 }
 
 type SlideUpdateRequest struct {
-	Id           int          `json:"id"`
-	CourseId     int          `json:"course_id"`
-	UserId       int          `json:"user_id"`
-	LessonId     int          `json:"lesson_id"`
-	Type         string       `json:"type"`
-	Title        string       `json:"title"`
-	Index        int          `json:"index"`
-	IsHidden     bool         `json:"is_hidden"`
-	Content      string       `json:"content"`
-	RubricPoints optional.Int `json:"rubric_points"`
-	AutoPoints   optional.Int `json:"auto_points"`
+	Id           int             `json:"id"`
+	CourseId     int             `json:"course_id"`
+	UserId       int             `json:"user_id"`
+	LessonId     int             `json:"lesson_id"`
+	Type         string          `json:"type"`
+	Title        string          `json:"title"`
+	Index        int             `json:"index"`
+	IsHidden     bool            `json:"is_hidden"`
+	Content      string          `json:"content"`
+	RubricPoints optional.Int    `json:"rubric_points"`
+	AutoPoints   optional.Int    `json:"auto_points"`
+	VideoUrl     optional.String `json:"video_url"`
+	Url          optional.String `json:"url"`
 }
 
 type LessonWithSlidesResponse struct {
@@ -134,6 +140,8 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 	request.CourseId = slide.CourseId
 	request.LessonId = slide.LessonId
 	request.UserId = slide.UserId
+	slide.VideoUrl.If(func(val string) { request.VideoUrl.Set(val) })
+	slide.Url.If(func(val string) { request.Url.Set(val) })
 	buf := bytes.Buffer{}
 	err := json.NewEncoder(&buf).Encode(request)
 	if err != nil {
@@ -233,6 +241,19 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 	resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", slide.Index)
 	if slide.IsHidden {
 		resource_string = resource_string + fmt.Sprintf("\tis_hidden = %t\n", slide.IsHidden)
+	}
+	if slide.Type == "video" {
+		slide.VideoUrl.If(func(val string) {
+			if val != "" {
+				resource_string = resource_string + fmt.Sprintf("\turl = \"%s\"\n", val)
+			}
+		})
+	} else if slide.Type == "webpage" {
+		slide.Url.If(func(val string) {
+			if val != "" {
+				resource_string = resource_string + fmt.Sprintf("\turl = \"%s\"\n", val)
+			}
+		})
 	}
 	content_path := path.Join(folder_path, "content.md")
 	f, e := os.Create(content_path)

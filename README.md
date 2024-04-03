@@ -39,7 +39,7 @@ go run main.go import_tf course my_course -c 12108
     * Destroying objects
     * Reading current state for diff
 * Slides
-    * Video, Webpage Embed, Custom HTML, Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
+    * Custom HTML, Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
     * Static Test Cases in Input/Output code challenges

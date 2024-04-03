@@ -133,6 +133,22 @@ resource "edstem_slide" "slide5" {
     file_path = "assets/test.pdf"
 }
 
+resource "edstem_slide" "slide6" {
+    type = "video"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - Video"
+    index = 5
+    url = "https://www.youtube.com/watch?v=feIeCR6oFNM"
+}
+
+resource "edstem_slide" "slide7" {
+    type = "webpage"
+    lesson_id = edstem_lesson.testing.id
+    title = "Terraform Slide - Webpage"
+    index = 6
+    url = "https://www.google.com/"
+}
+
 output "edu_lessons" {
     value = data.edstem_lesson.example
 }

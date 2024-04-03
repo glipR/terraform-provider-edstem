@@ -67,6 +67,7 @@ type slideResourceModel struct {
 	Content     types.String `tfsdk:"content"`
 	ContentType types.String `tfsdk:"content_type"`
 	FilePath    types.String `tfsdk:"file_path"`
+	Url         types.String `tfsdk:"url"`
 }
 
 // Schema defines the schema for the resource.
@@ -112,6 +113,9 @@ func (r *slideResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed: true,
 				Default:  stringdefault.StaticString(""),
 			},
+			"url": schema.StringAttribute{
+				Optional: true,
+			},
 		},
 	}
 }
@@ -131,6 +135,15 @@ func (model *slideResourceModel) MapAPIObj(ctx context.Context) (*resourceclient
 		fmt.Print(obj.Content)
 	}
 	obj.FileUrl.Set(model.FilePath.ValueString())
+	if model.Type.ValueString() == "video" {
+		if !model.Url.IsNull() {
+			obj.VideoUrl.Set(model.Url.ValueString())
+		}
+	} else if model.Type.ValueString() == "webpage" {
+		if !model.Url.IsNull() {
+			obj.Url.Set(model.Url.ValueString())
+		}
+	}
 	return &obj, nil
 }
 
