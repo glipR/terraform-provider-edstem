@@ -455,6 +455,10 @@ func RecReadPath(conn *websocket.Conn, web_path string, local_path string, is_di
 		}
 		f.WriteString(ot_resp.Data.Buffer)
 	} else {
+		err := os.MkdirAll(local_path, os.ModeDir)
+		if err != nil {
+			return err
+		}
 		var req FSOPRequest
 		req.Type = "fsop"
 		req.Data.Type = "list_folder"

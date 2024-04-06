@@ -283,7 +283,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 	if slide.Type == "code" {
 		s, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path, &resource_name, parent_resource_name)
 		if e != nil {
-			return "", nil
+			return "", e
 		}
 		resource_string = resource_string + "\n\n" + s
 	}
