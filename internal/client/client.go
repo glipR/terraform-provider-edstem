@@ -50,6 +50,7 @@ func (c *Client) HTTPRequest(path, method string, body bytes.Buffer, boundary *s
 	}
 
 	resp, err := c.HTTPClient.Do(req)
+	fmt.Println(resp.StatusCode, resp.Body)
 	if err != nil {
 		return nil, err
 	}

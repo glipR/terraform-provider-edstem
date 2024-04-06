@@ -128,6 +128,18 @@ func renderMathBlock(w io.Writer, p *ast.MathBlock, entering bool) {
 	}
 }
 
+func renderImgBlock(w io.Writer, p *ast.Image, id string, alt string, entering bool) {
+	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\" width=\"450\" alt=\"%s\"/></figure>", id, alt))
+}
+
+type ImgPostResponse struct {
+	File ImgPostResponseFileData `json:"file"`
+}
+
+type ImgPostResponseFileData struct {
+	ID string `json:"id"`
+}
+
 func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
 	if emph, ok := node.(*ast.Emph); ok {
 		renderEmphasis(w, emph, entering)
@@ -167,6 +179,53 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 	}
 	if listitem, ok := node.(*ast.ListItem); ok {
 		renderListItem(w, listitem, entering)
+		return ast.GoToNext, true
+	}
+	if img, ok := node.(*ast.Image); ok {
+		if entering {
+			path := string(img.Destination)
+			alt_text := string(img.Children[0].AsLeaf().Literal)
+
+			dat, err := os.ReadFile(path)
+			if err != nil {
+				fmt.Println("ERROR", err)
+				return ast.Terminate, false
+			}
+
+			// Request an image link
+			// The course id doesn't matter.
+			var course_id = ""
+			var token = os.Getenv("EDSTEM_TOKEN")
+			var c, _ = client.NewClient(&course_id, &token)
+
+			var boundary_value = "340451688527738698103188325240"
+			boundary := fmt.Sprintf("---------------------------%s", boundary_value)
+			// TODO: Content-type value
+			req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: image/png\n\n%s\n--%s--\n", boundary, path, dat, boundary)
+			req_text = strings.ReplaceAll(req_text, "\n", "\r\n")
+			f, _ := os.Create("temp.dat")
+			f.Write([]byte(req_text))
+			f.Close()
+			actual_req := bytes.Buffer{}
+			actual_req.Write([]byte(req_text))
+			fmt.Println(req_text)
+
+			body, e := c.HTTPRequest("files", "POST", actual_req, &boundary_value)
+			if e != nil {
+				fmt.Println("ERROR", e)
+				return ast.Terminate, false
+			}
+
+			resp_file := &ImgPostResponse{}
+			err = json.NewDecoder(body).Decode(resp_file)
+			if err != nil {
+				fmt.Println("ERROR", e)
+				return ast.Terminate, false
+			}
+
+			renderImgBlock(w, img, resp_file.File.ID, alt_text, entering)
+		}
+
 		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
