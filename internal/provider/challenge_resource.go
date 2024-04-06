@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/resourceclients"
 
@@ -106,8 +108,9 @@ type challengeResourceModel struct {
 	CustomMarkTimeLimitMS types.Int64  `tfsdk:"custom_mark_time_limit_ms"`
 	TestcaseJSON          types.String `tfsdk:"testcase_json"`
 
+	Criteria types.String `tfsdk:"criteria"`
+
 	// TODO:
-	// * Rubric
 	// * Test cases for the standard marking procedure
 }
 
@@ -273,6 +276,9 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"testcase_json": schema.StringAttribute{
 				Optional: true,
 			},
+			"criteria": schema.StringAttribute{
+				Optional: true,
+			},
 		},
 	}
 }
@@ -338,6 +344,15 @@ func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *clie
 			chal.Tickets.MarkCustom.RunLimit.CpuTime.Set(model.CustomMarkTimeLimitMS.ValueInt64())
 			chal.Tickets.MarkCustom.RunLimit.WallTime.Set(model.CustomMarkTimeLimitMS.ValueInt64())
 		}
+	}
+
+	if !model.Criteria.IsNull() {
+		var crit []resourceclients.Criteria
+		err = json.NewDecoder(strings.NewReader(model.Criteria.ValueString())).Decode(&crit)
+		if err != nil {
+			return nil, err
+		}
+		chal.Settings.Criteria = crit
 	}
 
 	return chal, nil

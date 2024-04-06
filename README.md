@@ -43,7 +43,6 @@ go run main.go import_tf course my_course -c 12108
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
     * Static Test Cases in Input/Output code challenges
-    * Code Challenge Rubrics
     * Slides out of order
 * Misc
     * Images in content

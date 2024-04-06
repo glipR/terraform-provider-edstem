@@ -57,6 +57,17 @@ type ChallengeSettings struct {
 	MaxSubmissionsWithIntermediateFiles int              `json:"max_submissions_with_intermediate_files"`
 	Passback                            PassbackSettings `json:"passback"`
 	PerTestCaseScores                   bool             `json:"per_testcase_scores"`
+	Criteria                            []Criteria       `json:"criteria"`
+}
+
+type Criteria struct {
+	Name   string          `json:"name"`
+	Levels []CriteriaLevel `json:"levels"`
+}
+
+type CriteriaLevel struct {
+	Mark        string `json:"mark"`
+	Description string `json:"description"`
 }
 
 type ChallengeTickets struct {
@@ -159,62 +170,6 @@ type PassbackSettings struct {
 
 type ChallegeResponseJSON struct {
 	Challenge Challenge `json:"challenge"`
-}
-
-type ChallengeResource struct {
-	Id       int `json:"id"`
-	CourseId int `json:"course_id"`
-	SlideId  int `json:"slide_id"`
-	LessonId int `json:"lesson_id"`
-
-	Explanation string `json:"explanation"`
-	FolderPath  string `json:"folder_path"`
-	FolderSha   string `json:"folder_sha"`
-
-	Type string `json:"type"`
-	// Points int  `json:"points"`
-
-	BuildCommand     string `json:"build_command"`
-	RunCommand       string `json:"run_command"`
-	TestCommand      string `json:"test_command"`
-	TerminalCommand  string `json:"terminal_command"`
-	CustomRunCommand string `json:"custom_run_command"`
-
-	// PointLossThreshold int `json:"point_loss_threshold"`
-	// PointLossEvery     int `json:"point_loss_every"`
-	// PointLossAmount    int `json:"point_loss_amount"`
-
-	PerTestcaseScores bool `json:"per_testcase_scores"`
-
-	MaxSubmissionsPerInterval int `json:"max_submissions_per_interval"`
-	AttemptLimitInterval      int `json:"attempt_limit_interval"`
-
-	OnlyGitSubmission            bool `json:"only_git_submission"`
-	AllowSubmitAfterMarkingLimit bool `json:"allow_submit_after_marking_limit"`
-
-	PassbackScoringMode       string  `json:"passback_scoring_mode"`
-	PassbackMaxAutomaticScore float64 `json:"passback_max_automatic_score"`
-	PassbackScaleTo           float64 `json:"passback_scale_to"`
-
-	Run                  bool `json:"feature_run"`
-	Check                bool `json:"feature_check"`
-	Connect              bool `json:"feature_connect"`
-	Mark                 bool `json:"feature_mark"`
-	Terminal             bool `json:"feature_terminal"`
-	Feedback             bool `json:"feature_feedback"`
-	ManualCompletion     bool `json:"feature_manual_completion"`
-	AnonymousSubmissions bool `json:"feature_anonymous_submissions"`
-	Arguments            bool `json:"feature_arguments"`
-	ConfirmSubmit        bool `json:"feature_confirm_submit"`
-	RunBeforeSubmit      bool `json:"feature_run_before_submit"`
-	GitSubmission        bool `json:"feature_git_submission"`
-	Editor               bool `json:"feature_editor"`
-	RemoteDesktop        bool `json:"feature_remote_desktop"`
-	IntermediateFiles    bool `json:"feature_intermediate_files"`
-
-	// TODO:
-	// * Rubric
-	// * Test cases for the standard marking procedure
 }
 
 type TicketResponse struct {
@@ -420,7 +375,22 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		resource_string = resource_string + fmt.Sprintf("\tcustom_mark_time_limit_ms = %d\n", val)
 	})
 
-	// TODO: Rubrics and Test cases
+	if len(chal.Settings.Criteria) > 0 {
+		var buf = bytes.Buffer{}
+		err = json.NewEncoder(&buf).Encode(chal.Settings.Criteria)
+		if err != nil {
+			return "", err
+		}
+		content_path := path.Join(folder_path, "criteria.json")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
+		}
+		f.WriteString(buf.String())
+		resource_string = resource_string + fmt.Sprintf("\tcriteria = file(\"%s\")\n", content_path)
+	}
+
+	// TODO: Test cases
 	resource_string = resource_string + "}"
 
 	return resource_string, nil

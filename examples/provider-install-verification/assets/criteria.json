@@ -1,0 +1,28 @@
+[
+    {
+        "name": "Test Criterion 1",
+        "levels": [
+            {
+                "mark": "5",
+                "description": "Excellent"
+            },
+            {
+                "mark": "1",
+                "description": "Poor"
+            }
+        ]
+    },
+    {
+        "name": "Test Criterion 2",
+        "levels": [
+            {
+                "mark": "",
+                "description": "Ok, unmarked"
+            },
+            {
+                "mark": "",
+                "description": "Maybe ok"
+            }
+        ]
+    }
+]
