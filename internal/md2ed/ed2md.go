@@ -12,8 +12,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-var img_blocks = 0
-
 func resolveNodes(n *html.Node, content_folder string) string {
 	preblocks := make([]string, 0)
 	blocks := make([]string, 0)
@@ -78,19 +76,19 @@ func resolveNodes(n *html.Node, content_folder string) string {
 					src = attr.Val
 				}
 			}
-			// Just guess its a png. TODO: Figure this out
-			image_file := fmt.Sprintf("image%d.png", img_blocks)
-			img_blocks += 1
-			out, err := os.Create(path.Join(content_folder, image_file))
-			if err != nil {
-				return ""
-			}
-			defer out.Close()
 			resp, err := http.Get(src)
 			if err != nil {
 				return ""
 			}
 			defer resp.Body.Close()
+			resp.Header.Get("Content-Disposition")
+			disposition := resp.Header.Get("Content-Disposition")
+			image_file := strings.Split(strings.Split(disposition, "filename=\"")[1], "\";")[0]
+			out, err := os.Create(path.Join(content_folder, image_file))
+			if err != nil {
+				return ""
+			}
+			defer out.Close()
 
 			io.Copy(out, resp.Body)
 			preblocks = append(preblocks, "![](")
