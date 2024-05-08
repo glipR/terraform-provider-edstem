@@ -82,30 +82,10 @@ resource "edstem_challenge" "slide4_code" {
     folder_sha = sha1(join("", [for f in fileset(path.cwd, "assets/code_challenge/**"): filesha1("${path.cwd}/${f}")]))
 
     type = "code"
-    testcase_json = jsonencode({
-        testcases = [
-            {
-                name = "Test 1"
-                hidden = true
-                time_limit_ms = 3000
-                run_command = "special_command"
-                score = 2
-                stdin_path = "1.in"
-                stdout_path = "1.out"
-                acceptable_line_errors = 1
-            },
-            {
-                name = "Test 1"
-                private = true
-                time_limit_ms = 1500
-                run_command = "special_command 2"
-                score = 4
-                stdin_path = "2.in"
-                stdout_path = "2.out"
-                acceptable_line_errors = 0
-            }
-        ]
-    })
+    testcase_json = file("assets/testcases.json")
+    testcase_easy = true
+    testcase_pty = false
+    testcase_overlay_test_files = true
 
     feature_anonymous_submissions = true
     feature_manual_completion = false

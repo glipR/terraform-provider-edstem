@@ -101,65 +101,65 @@ type MarkCustomTicket struct {
 type RunLimitConfig struct {
 	CpuTime  optional.Int64 `json:"cpu_time"`
 	WallTime optional.Int64 `json:"wall_time"`
+	Pty      optional.Bool  `json:"pty"`
 }
 
 type MarkStandardTicket struct {
-	BuildCommand string `json:"build_command"`
-	RunCommand   string `json:"run_command"`
-	// Testcases []any `json:"testcases"`
+	BuildCommand string         `json:"build_command"`
+	RunCommand   string         `json:"run_command"`
+	Testcases    []TestCase     `json:"testcases"`
+	Easy         bool           `json:"easy"`
+	MarkAll      bool           `json:"mark_all"`
+	RunLimit     RunLimitConfig `json:"run_limit"`
+	Overlay      bool           `json:"overlay"`
+}
+
+type TestCase struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Hidden      bool            `json:"hidden"`
+	Private     bool            `json:"private"`
+	Score       int             `json:"score"`
+	MaxScore    int             `json:"max_score"`
+	Skip        bool            `json:"skip"`
+	RunCommand  optional.String `json:"run_command"`
+	StdinPath   string          `json:"stdin_path"`
+	OutputFiles []string        `json:"output_files"`
+	Checks      []TestCaseCheck `json:"checks"`
+	RunLimit    RunLimitConfig  `json:"run_limit"`
+}
+
+type TestCaseCheck struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	ExpectPath string `json:"expect_path"`
+	Markdown   bool   `json:"markdown"`
+	// TODO: More fields
 	/*
 		{
-			"testcases": [
-				{
-					"name": "Test1",
-					"description": "",
-					"hidden": true,
-					"private": false,
-					"score": 0,
-					"max_score": 0,
-					"skip": false,
+					"name": "",
+					"type": "check_diff",
+					"source": {
+						"type": "source_mixed",
+						"file": ""
+					},
+					"transforms": [],
+					"expect_path": "1.out",
+					"acceptable_line_error_rate": 0,
+					"acceptable_char_error_rate": 0,
+					"acceptable_line_errors": 0,
+					"acceptable_char_errors": 0,
+					"regex_match": "",
 					"run_limit": {
-						"cpu_time": 3000,
-						"wall_time": 3000,
 						"pty_size": {
 							"rows": 0,
 							"cols": 0
 						}
 					},
-					"run_command": "special_command",
-					"stdin_path": "1.in",
-					"extra_paths": null,
-					"checks": [
-						{
-							"name": "",
-							"type": "check_diff",
-							"source": {
-								"type": "source_mixed",
-								"file": ""
-							},
-							"transforms": [],
-							"expect_path": "1.out",
-							"acceptable_line_error_rate": 0,
-							"acceptable_char_error_rate": 0,
-							"acceptable_line_errors": 0,
-							"acceptable_char_errors": 0,
-							"regex_match": "",
-							"run_limit": {
-								"pty_size": {
-									"rows": 0,
-									"cols": 0
-								}
-							},
-							"run_command": "",
-							"markdown": false
-						}
-					],
-					"output_files": []
+					"run_command": "",
+					"markdown": false
 				}
-			]
-		}
 	*/
-	MarkAll bool `json:"mark_all"`
 }
 
 type PassbackSettings struct {
