@@ -19,6 +19,8 @@ terraform {
 }
 ```
 
+Unfortunately `-parallelism=1` must be used with this provider because we can't have multiple slides being applied at the same time.
+
 ## How do I import existing Ed lessons etc. into my terraform?
 
 You'll need to invoke this module yourself (TODO: Add what this script is for people installing the package)
@@ -43,7 +45,6 @@ go run main.go import_tf course my_course -c 12108
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
     * Static Test Cases in Input/Output code challenges
-    * Slides out of order
 * Misc
     * Images in content
 
