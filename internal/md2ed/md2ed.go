@@ -129,7 +129,8 @@ func renderMathBlock(w io.Writer, p *ast.MathBlock, entering bool) {
 }
 
 func renderImgBlock(w io.Writer, p *ast.Image, id string, alt string, entering bool) {
-	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\" width=\"450\" alt=\"%s\"/></figure>", id, alt))
+	// TODO: Don't use a fixed width
+	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\" width=\"150\" alt=\"%s\"/></figure>", id, alt))
 }
 
 type ImgPostResponse struct {
@@ -150,6 +151,12 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 		return ast.GoToNext, true
 	}
 	if para, ok := node.(*ast.Paragraph); ok {
+		for _, child := range node.AsContainer().Children {
+			if _, ok := child.(*ast.Image); ok {
+				// Images in paragraphs don't render.
+				return ast.GoToNext, true
+			}
+		}
 		renderParagraph(w, para, entering, para.AsContainer().Attribute)
 		return ast.GoToNext, true
 	}
@@ -198,19 +205,12 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 			var token = os.Getenv("EDSTEM_TOKEN")
 			var c, _ = client.NewClient(&course_id, &token)
 
-			var boundary_value = "340451688527738698103188325240"
-			boundary := fmt.Sprintf("---------------------------%s", boundary_value)
-			// TODO: Content-type value
+			boundary := "----WebKitFormBoundaryplBATvmbbo4b7Pet"
 			req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: image/png\n\n%s\n--%s--\n", boundary, path, dat, boundary)
-			req_text = strings.ReplaceAll(req_text, "\n", "\r\n")
-			f, _ := os.Create("temp.dat")
-			f.Write([]byte(req_text))
-			f.Close()
 			actual_req := bytes.Buffer{}
 			actual_req.Write([]byte(req_text))
-			fmt.Println(req_text)
 
-			body, e := c.HTTPRequest("files", "POST", actual_req, &boundary_value)
+			body, e := c.HTTPRequest("files", "POST", actual_req, &boundary)
 			if e != nil {
 				fmt.Println("ERROR", e)
 				return ast.Terminate, false
@@ -224,6 +224,7 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 			}
 
 			renderImgBlock(w, img, resp_file.File.ID, alt_text, entering)
+			return ast.SkipChildren, true
 		}
 
 		return ast.GoToNext, true

@@ -47,7 +47,7 @@ go run main.go import_tf course my_course -c 12108
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
 * Misc
-    * Images in content
+    * Images will always have a hardcoded width of 150
 
 
 ## Cautionary areas
