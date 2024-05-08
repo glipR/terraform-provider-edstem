@@ -390,6 +390,33 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		resource_string = resource_string + fmt.Sprintf("\tcriteria = file(\"%s\")\n", content_path)
 	}
 
+	if len(chal.Tickets.MarkStandard.Testcases) > 0 {
+		res, err := json.MarshalIndent(chal.Tickets.MarkStandard.Testcases, "", "  ")
+		if err != nil {
+			return "", err
+		}
+		content_path := path.Join(folder_path, "testcases.json")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
+		}
+		f.Write(res)
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_json = file(\"%s\")\n", content_path)
+	}
+
+	chal.Tickets.MarkStandard.RunLimit.Pty.If(func(val bool) {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_pty = %t\n", val)
+	})
+	if chal.Tickets.MarkStandard.Easy {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_easy = %t\n", chal.Tickets.MarkStandard.Easy)
+	}
+	if chal.Tickets.MarkStandard.MarkAll {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_mark_all = %t\n", chal.Tickets.MarkStandard.MarkAll)
+	}
+	if chal.Tickets.MarkStandard.Overlay {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_overlay_test_files = %t\n", chal.Tickets.MarkStandard.Overlay)
+	}
+
 	// TODO: Test cases
 	resource_string = resource_string + "}"
 

@@ -408,7 +408,7 @@ func ReadChallengeRepo(conn *client.Client, challenge_id int, challenge_folder_p
 	}
 
 	if len(m_resp.Data.Listing) != 0 {
-		os.MkdirAll(path.Join(challenge_folder_path, repo_name), os.ModeDir)
+		os.MkdirAll(path.Join(challenge_folder_path, repo_name), 0777)
 	}
 
 	for _, returned := range m_resp.Data.Listing {
@@ -455,7 +455,7 @@ func RecReadPath(conn *websocket.Conn, web_path string, local_path string, is_di
 		}
 		f.WriteString(ot_resp.Data.Buffer)
 	} else {
-		err := os.MkdirAll(local_path, os.ModeDir)
+		err := os.MkdirAll(local_path, 0777)
 		if err != nil {
 			return err
 		}
