@@ -101,65 +101,65 @@ type MarkCustomTicket struct {
 type RunLimitConfig struct {
 	CpuTime  optional.Int64 `json:"cpu_time"`
 	WallTime optional.Int64 `json:"wall_time"`
+	Pty      optional.Bool  `json:"pty"`
 }
 
 type MarkStandardTicket struct {
-	BuildCommand string `json:"build_command"`
-	RunCommand   string `json:"run_command"`
-	// Testcases []any `json:"testcases"`
+	BuildCommand string         `json:"build_command"`
+	RunCommand   string         `json:"run_command"`
+	Testcases    []TestCase     `json:"testcases"`
+	Easy         bool           `json:"easy"`
+	MarkAll      bool           `json:"mark_all"`
+	RunLimit     RunLimitConfig `json:"run_limit"`
+	Overlay      bool           `json:"overlay"`
+}
+
+type TestCase struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Hidden      bool            `json:"hidden"`
+	Private     bool            `json:"private"`
+	Score       int             `json:"score"`
+	MaxScore    int             `json:"max_score"`
+	Skip        bool            `json:"skip"`
+	RunCommand  optional.String `json:"run_command"`
+	StdinPath   string          `json:"stdin_path"`
+	OutputFiles []string        `json:"output_files"`
+	Checks      []TestCaseCheck `json:"checks"`
+	RunLimit    RunLimitConfig  `json:"run_limit"`
+}
+
+type TestCaseCheck struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	ExpectPath string `json:"expect_path"`
+	Markdown   bool   `json:"markdown"`
+	// TODO: More fields
 	/*
 		{
-			"testcases": [
-				{
-					"name": "Test1",
-					"description": "",
-					"hidden": true,
-					"private": false,
-					"score": 0,
-					"max_score": 0,
-					"skip": false,
+					"name": "",
+					"type": "check_diff",
+					"source": {
+						"type": "source_mixed",
+						"file": ""
+					},
+					"transforms": [],
+					"expect_path": "1.out",
+					"acceptable_line_error_rate": 0,
+					"acceptable_char_error_rate": 0,
+					"acceptable_line_errors": 0,
+					"acceptable_char_errors": 0,
+					"regex_match": "",
 					"run_limit": {
-						"cpu_time": 3000,
-						"wall_time": 3000,
 						"pty_size": {
 							"rows": 0,
 							"cols": 0
 						}
 					},
-					"run_command": "special_command",
-					"stdin_path": "1.in",
-					"extra_paths": null,
-					"checks": [
-						{
-							"name": "",
-							"type": "check_diff",
-							"source": {
-								"type": "source_mixed",
-								"file": ""
-							},
-							"transforms": [],
-							"expect_path": "1.out",
-							"acceptable_line_error_rate": 0,
-							"acceptable_char_error_rate": 0,
-							"acceptable_line_errors": 0,
-							"acceptable_char_errors": 0,
-							"regex_match": "",
-							"run_limit": {
-								"pty_size": {
-									"rows": 0,
-									"cols": 0
-								}
-							},
-							"run_command": "",
-							"markdown": false
-						}
-					],
-					"output_files": []
+					"run_command": "",
+					"markdown": false
 				}
-			]
-		}
 	*/
-	MarkAll bool `json:"mark_all"`
 }
 
 type PassbackSettings struct {
@@ -267,7 +267,7 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		if e != nil {
 			return "", e
 		}
-		f.WriteString(md2ed.RenderEdToMD(chal.Explanation))
+		f.WriteString(md2ed.RenderEdToMD(chal.Explanation, folder_path))
 		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
 
@@ -388,6 +388,33 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		}
 		f.WriteString(buf.String())
 		resource_string = resource_string + fmt.Sprintf("\tcriteria = file(\"%s\")\n", content_path)
+	}
+
+	if len(chal.Tickets.MarkStandard.Testcases) > 0 {
+		res, err := json.MarshalIndent(chal.Tickets.MarkStandard.Testcases, "", "  ")
+		if err != nil {
+			return "", err
+		}
+		content_path := path.Join(folder_path, "testcases.json")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
+		}
+		f.Write(res)
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_json = file(\"%s\")\n", content_path)
+	}
+
+	chal.Tickets.MarkStandard.RunLimit.Pty.If(func(val bool) {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_pty = %t\n", val)
+	})
+	if chal.Tickets.MarkStandard.Easy {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_easy = %t\n", chal.Tickets.MarkStandard.Easy)
+	}
+	if chal.Tickets.MarkStandard.MarkAll {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_mark_all = %t\n", chal.Tickets.MarkStandard.MarkAll)
+	}
+	if chal.Tickets.MarkStandard.Overlay {
+		resource_string = resource_string + fmt.Sprintf("\ttestcase_overlay_test_files = %t\n", chal.Tickets.MarkStandard.Overlay)
 	}
 
 	// TODO: Test cases

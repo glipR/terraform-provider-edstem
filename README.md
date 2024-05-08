@@ -7,7 +7,7 @@
 
 ## How do I use?
 
-Include the following snippet in the `require_providers` block of your terraform code:
+Include the following snippet in the `required_providers` block of your terraform code:
 
 ```
 terraform {
@@ -18,6 +18,8 @@ terraform {
   }
 }
 ```
+
+Unfortunately `-parallelism=1` must be used with this provider because we can't have multiple slides being applied at the same time.
 
 ## How do I import existing Ed lessons etc. into my terraform?
 
@@ -33,6 +35,8 @@ go run main.go import_tf lesson my_course -c 12108 -l 36778
 go run main.go import_tf course my_course -c 12108
 ```
 
+(TODO: Make the import script have the (default) option to also fill the tfstate file)
+
 ## Currently not functional components
 
 * Terraform Actions:
@@ -42,10 +46,8 @@ go run main.go import_tf course my_course -c 12108
     * Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
-    * Static Test Cases in Input/Output code challenges
-    * Slides out of order
 * Misc
-    * Images in content
+    * Images will always have a hardcoded width of 150
 
 
 ## Cautionary areas

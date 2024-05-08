@@ -29,7 +29,7 @@ resource "edstem_lesson" "testing" {
 resource "edstem_slide" "slide1" {
     type = "document"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Document"
+    title = "Terraform Slide 1 - Document"
     index = 1
     content = file("assets/test.md")
 }
@@ -37,7 +37,7 @@ resource "edstem_slide" "slide1" {
 resource "edstem_slide" "slide2" {
     type = "quiz"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Quiz"
+    title = "Terraform Slide 2 - Quiz"
     index = 2
     content = ""
 }
@@ -45,7 +45,7 @@ resource "edstem_slide" "slide2" {
 resource "edstem_slide" "slide3" {
     type = "code"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Code Custom Marking"
+    title = "Terraform Slide 3 - Code Custom Marking"
     index = 3
     content = "Description content"
 }
@@ -69,7 +69,7 @@ resource "edstem_challenge" "slide3_code" {
 resource "edstem_slide" "slide4" {
     type = "code"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Code Input Output Marking"
+    title = "Terraform Slide 4 - Code Input Output Marking"
     index = 4
     content = "Description content"
 }
@@ -82,30 +82,10 @@ resource "edstem_challenge" "slide4_code" {
     folder_sha = sha1(join("", [for f in fileset(path.cwd, "assets/code_challenge/**"): filesha1("${path.cwd}/${f}")]))
 
     type = "code"
-    testcase_json = jsonencode({
-        testcases = [
-            {
-                name = "Test 1"
-                hidden = true
-                time_limit_ms = 3000
-                run_command = "special_command"
-                score = 2
-                stdin_path = "1.in"
-                stdout_path = "1.out"
-                acceptable_line_errors = 1
-            },
-            {
-                name = "Test 1"
-                private = true
-                time_limit_ms = 1500
-                run_command = "special_command 2"
-                score = 4
-                stdin_path = "2.in"
-                stdout_path = "2.out"
-                acceptable_line_errors = 0
-            }
-        ]
-    })
+    testcase_json = file("assets/testcases.json")
+    testcase_easy = true
+    testcase_pty = false
+    testcase_overlay_test_files = true
 
     feature_anonymous_submissions = true
     feature_manual_completion = false
@@ -130,7 +110,7 @@ resource "edstem_question" "question2" {
 resource "edstem_slide" "slide5" {
     type = "pdf"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - PDF"
+    title = "Terraform Slide 5 - PDF"
     index = 5
     file_path = "assets/test.pdf"
 }
@@ -138,7 +118,7 @@ resource "edstem_slide" "slide5" {
 resource "edstem_slide" "slide6" {
     type = "video"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Video"
+    title = "Terraform Slide 6 - Video"
     index = 6
     url = "https://www.youtube.com/watch?v=feIeCR6oFNM"
 }
@@ -146,7 +126,7 @@ resource "edstem_slide" "slide6" {
 resource "edstem_slide" "slide7" {
     type = "webpage"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - Webpage"
+    title = "Terraform Slide 7 - Webpage"
     index = 7
     url = "https://www.google.com/"
 }
@@ -154,7 +134,7 @@ resource "edstem_slide" "slide7" {
 resource "edstem_slide" "slide8" {
     type = "html"
     lesson_id = edstem_lesson.testing.id
-    title = "Terraform Slide - HTML"
+    title = "Terraform Slide 8 - HTML"
     index = 8
     content = "<h1>TEST</h1>"
 }

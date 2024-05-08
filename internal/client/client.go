@@ -50,11 +50,12 @@ func (c *Client) HTTPRequest(path, method string, body bytes.Buffer, boundary *s
 	}
 
 	resp, err := c.HTTPClient.Do(req)
+	fmt.Println(resp.StatusCode, resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 		respBody := new(bytes.Buffer)
 		_, err := respBody.ReadFrom(resp.Body)
 		if err != nil {

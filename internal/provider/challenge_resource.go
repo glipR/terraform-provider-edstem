@@ -105,8 +105,12 @@ type challengeResourceModel struct {
 	RemoteDesktop        types.Bool `tfsdk:"feature_remote_desktop"`
 	IntermediateFiles    types.Bool `tfsdk:"feature_intermediate_files"`
 
-	CustomMarkTimeLimitMS types.Int64  `tfsdk:"custom_mark_time_limit_ms"`
-	TestcaseJSON          types.String `tfsdk:"testcase_json"`
+	CustomMarkTimeLimitMS    types.Int64  `tfsdk:"custom_mark_time_limit_ms"`
+	TestcaseJSON             types.String `tfsdk:"testcase_json"`
+	TestcasePty              types.Bool   `tfsdk:"testcase_pty"`
+	TestcaseEasy             types.Bool   `tfsdk:"testcase_easy"`
+	TestcaseMarkAll          types.Bool   `tfsdk:"testcase_mark_all"`
+	TestcaseOverlayTestFiles types.Bool   `tfsdk:"testcase_overlay_test_files"`
 
 	Criteria types.String `tfsdk:"criteria"`
 
@@ -276,6 +280,26 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"testcase_json": schema.StringAttribute{
 				Optional: true,
 			},
+			"testcase_pty": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(false),
+				Optional: true,
+				Computed: true,
+			},
+			"testcase_easy": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(false),
+				Optional: true,
+				Computed: true,
+			},
+			"testcase_mark_all": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(false),
+				Optional: true,
+				Computed: true,
+			},
+			"testcase_overlay_test_files": schema.BoolAttribute{
+				Default:  booldefault.StaticBool(false),
+				Optional: true,
+				Computed: true,
+			},
 			"criteria": schema.StringAttribute{
 				Optional: true,
 			},
@@ -336,8 +360,19 @@ func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *clie
 		chal.Tickets.RunStandard.RunCommand = model.RunCommand.ValueString()
 		chal.Tickets.RunStandard.BuildCommand = model.BuildCommand.ValueString()
 
-		// TODO
-		// chal.Tickets.MarkStandard.Testcases = ...
+		testcases := model.TestcaseJSON.ValueString()
+		if testcases != "" {
+			resp := &[]resourceclients.TestCase{}
+			err = json.NewDecoder(strings.NewReader(testcases)).Decode(resp)
+			if err != nil {
+				return nil, err
+			}
+			chal.Tickets.MarkStandard.Testcases = *resp
+		}
+		chal.Tickets.MarkStandard.RunLimit.Pty.Set(model.TestcasePty.ValueBool())
+		chal.Tickets.MarkStandard.Easy = model.TestcaseEasy.ValueBool()
+		chal.Tickets.MarkStandard.MarkAll = model.TestcaseMarkAll.ValueBool()
+		chal.Tickets.MarkStandard.Overlay = model.TestcaseOverlayTestFiles.ValueBool()
 	} else if chal.Type == "custom" {
 		chal.Tickets.MarkCustom.RunCommand = model.CustomRunCommand.ValueString()
 		if !model.CustomMarkTimeLimitMS.IsNull() {

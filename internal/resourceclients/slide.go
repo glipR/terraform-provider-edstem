@@ -180,7 +180,42 @@ func UpdateSlide(c *client.Client, slide *Slide) error {
 		return err
 	}
 	slide.Id = resp_lesson.Slide.Id
-	return err
+
+	// Reordering slides if necessary
+	slide_ids, err := GetSlideIds(c, slide.LessonId)
+	if err != nil {
+		return err
+	}
+
+	if (slide.Index - 1) < len(slide_ids) {
+		if slide_ids[slide.Index-1] != slide.Id {
+			// Reorder
+			past_point := 0
+			if slide.Index != len(slide_ids) {
+				past_point = slide_ids[slide.Index]
+			}
+			if past_point == slide.Id {
+				_, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d/reorder/%d", slide.Id, slide_ids[slide.Index-1]), "PUT", bytes.Buffer{}, nil)
+				if err != nil {
+					return err
+				}
+			} else {
+
+				// reorder slide_ids[slide.Index-1] to before slide.Id
+				_, err := c.HTTPRequest(fmt.Sprintf("lessons/slides/%d/reorder/%d", slide_ids[slide.Index-1], slide.Id), "PUT", bytes.Buffer{}, nil)
+				if err != nil {
+					return err
+				}
+				// reorder slide.Id to before past_point
+				_, err = c.HTTPRequest(fmt.Sprintf("lessons/slides/%d/reorder/%d", slide.Id, past_point), "PUT", bytes.Buffer{}, nil)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} // Nothing we can do otherwise - wrong spot.
+
+	return nil
 }
 
 // The three lines
@@ -265,7 +300,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 			if e != nil {
 				return "", e
 			}
-			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet()))
+			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet(), folder_path))
 			resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 		}
 	}
@@ -275,7 +310,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 		if e != nil {
 			return "", e
 		}
-		f.WriteString(md2ed.RenderEdToMD(slide.Content))
+		f.WriteString(md2ed.RenderEdToMD(slide.Content, folder_path))
 		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
 	resource_string = resource_string + "}"

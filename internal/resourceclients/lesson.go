@@ -270,7 +270,7 @@ func LessonToTerraform(c *client.Client, lesson_id int, resource_name string, fo
 
 	for i := range slide_ids {
 		slide_path := path.Join(folder_path, fmt.Sprintf("slide_%d", i))
-		e = os.MkdirAll(slide_path, os.ModeDir)
+		e = os.MkdirAll(slide_path, 0777)
 		if e != nil {
 			return "", nil
 		}

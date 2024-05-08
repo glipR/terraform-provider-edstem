@@ -128,6 +128,19 @@ func renderMathBlock(w io.Writer, p *ast.MathBlock, entering bool) {
 	}
 }
 
+func renderImgBlock(w io.Writer, p *ast.Image, id string, alt string, entering bool) {
+	// TODO: Don't use a fixed width
+	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\" width=\"150\" alt=\"%s\"/></figure>", id, alt))
+}
+
+type ImgPostResponse struct {
+	File ImgPostResponseFileData `json:"file"`
+}
+
+type ImgPostResponseFileData struct {
+	ID string `json:"id"`
+}
+
 func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
 	if emph, ok := node.(*ast.Emph); ok {
 		renderEmphasis(w, emph, entering)
@@ -138,6 +151,12 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 		return ast.GoToNext, true
 	}
 	if para, ok := node.(*ast.Paragraph); ok {
+		for _, child := range node.AsContainer().Children {
+			if _, ok := child.(*ast.Image); ok {
+				// Images in paragraphs don't render.
+				return ast.GoToNext, true
+			}
+		}
 		renderParagraph(w, para, entering, para.AsContainer().Attribute)
 		return ast.GoToNext, true
 	}
@@ -167,6 +186,47 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 	}
 	if listitem, ok := node.(*ast.ListItem); ok {
 		renderListItem(w, listitem, entering)
+		return ast.GoToNext, true
+	}
+	if img, ok := node.(*ast.Image); ok {
+		if entering {
+			path := string(img.Destination)
+			alt_text := string(img.Children[0].AsLeaf().Literal)
+
+			dat, err := os.ReadFile(path)
+			if err != nil {
+				fmt.Println("ERROR", err)
+				return ast.Terminate, false
+			}
+
+			// Request an image link
+			// The course id doesn't matter.
+			var course_id = ""
+			var token = os.Getenv("EDSTEM_TOKEN")
+			var c, _ = client.NewClient(&course_id, &token)
+
+			boundary := "----WebKitFormBoundaryplBATvmbbo4b7Pet"
+			req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: image/png\n\n%s\n--%s--\n", boundary, path, dat, boundary)
+			actual_req := bytes.Buffer{}
+			actual_req.Write([]byte(req_text))
+
+			body, e := c.HTTPRequest("files", "POST", actual_req, &boundary)
+			if e != nil {
+				fmt.Println("ERROR", e)
+				return ast.Terminate, false
+			}
+
+			resp_file := &ImgPostResponse{}
+			err = json.NewDecoder(body).Decode(resp_file)
+			if err != nil {
+				fmt.Println("ERROR", e)
+				return ast.Terminate, false
+			}
+
+			renderImgBlock(w, img, resp_file.File.ID, alt_text, entering)
+			return ast.SkipChildren, true
+		}
+
 		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
