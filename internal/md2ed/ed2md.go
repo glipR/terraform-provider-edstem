@@ -2,13 +2,19 @@ package md2ed
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
-func resolveNodes(n *html.Node) string {
+var img_blocks = 0
+
+func resolveNodes(n *html.Node, content_folder string) string {
 	preblocks := make([]string, 0)
 	blocks := make([]string, 0)
 	endblocks := make([]string, 0)
@@ -17,7 +23,7 @@ func resolveNodes(n *html.Node) string {
 		fmt.Println(n.Parent.Data, "->", n.Data)
 	}*/
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		blocks = append(blocks, resolveNodes(c))
+		blocks = append(blocks, resolveNodes(c, content_folder))
 	}
 	if n.Type == html.ElementNode {
 		if n.Data == "html" {
@@ -65,6 +71,32 @@ func resolveNodes(n *html.Node) string {
 			combinator = ""
 			preblocks = append(preblocks, "`")
 			endblocks = append(endblocks, "`")
+		} else if n.Data == "img" {
+			src := ""
+			for _, attr := range n.Attr {
+				if attr.Key == "src" {
+					src = attr.Val
+				}
+			}
+			// Just guess its a png. TODO: Figure this out
+			image_file := fmt.Sprintf("image%d.png", img_blocks)
+			img_blocks += 1
+			out, err := os.Create(path.Join(content_folder, image_file))
+			if err != nil {
+				return ""
+			}
+			defer out.Close()
+			resp, err := http.Get(src)
+			if err != nil {
+				return ""
+			}
+			defer resp.Body.Close()
+
+			io.Copy(out, resp.Body)
+			preblocks = append(preblocks, "![](")
+			blocks = append(blocks, image_file)
+			endblocks = append(endblocks, ")")
+			combinator = ""
 		} else if n.Data == "heading" {
 			level := 1
 			for _, attr := range n.Attr {
@@ -94,7 +126,7 @@ func resolveNodes(n *html.Node) string {
 			combinator = "\n"
 			preblocks = append(preblocks, fmt.Sprintf("```%s%s", language, strings.Join(extras, "")))
 			endblocks = append(endblocks, "```")
-		} else if n.Data == "head" || n.Data == "body" || n.Data == "document" || n.Data == "snippet-file" {
+		} else if n.Data == "head" || n.Data == "body" || n.Data == "document" || n.Data == "snippet-file" || n.Data == "figure" {
 			// Nothing
 		} else if n.Data == "table" {
 			// This should contain a `thead` child which tells us how many columns.
@@ -127,11 +159,11 @@ func resolveNodes(n *html.Node) string {
 	return strings.Join(blocks, combinator)
 }
 
-func RenderEdToMD(content string) string {
+func RenderEdToMD(content string, content_folder string) string {
 	content = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(content,
 		"</link", "</a"),
 		"<link", "<a"),
 		"<break/>", "<break></break>")
 	node, _ := html.Parse(strings.NewReader(content))
-	return resolveNodes(node)
+	return resolveNodes(node, content_folder)
 }

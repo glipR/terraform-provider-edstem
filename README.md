@@ -7,7 +7,7 @@
 
 ## How do I use?
 
-Include the following snippet in the `require_providers` block of your terraform code:
+Include the following snippet in the `required_providers` block of your terraform code:
 
 ```
 terraform {
@@ -34,6 +34,8 @@ go run main.go import_tf lesson my_course -c 12108 -l 36778
 // This one grabs all lessons from course 12108
 go run main.go import_tf course my_course -c 12108
 ```
+
+(TODO: Make the import script have the (default) option to also fill the tfstate file)
 
 ## Currently not functional components
 

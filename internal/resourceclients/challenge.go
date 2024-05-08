@@ -267,7 +267,7 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		if e != nil {
 			return "", e
 		}
-		f.WriteString(md2ed.RenderEdToMD(chal.Explanation))
+		f.WriteString(md2ed.RenderEdToMD(chal.Explanation, folder_path))
 		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
 

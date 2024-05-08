@@ -213,7 +213,7 @@ func sysargs() {
 	} else if os.Args[1] == "render_md" {
 		fpath := os.Args[2]
 		content, _ := os.ReadFile(fpath)
-		fmt.Println(md2ed.RenderEdToMD(string(content)))
+		fmt.Println(md2ed.RenderEdToMD(string(content), ""))
 	}
 }
 

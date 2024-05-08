@@ -300,7 +300,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 			if e != nil {
 				return "", e
 			}
-			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet()))
+			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet(), folder_path))
 			resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 		}
 	}
@@ -310,7 +310,7 @@ func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_na
 		if e != nil {
 			return "", e
 		}
-		f.WriteString(md2ed.RenderEdToMD(slide.Content))
+		f.WriteString(md2ed.RenderEdToMD(slide.Content, folder_path))
 		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
 	}
 	resource_string = resource_string + "}"
