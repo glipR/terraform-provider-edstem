@@ -152,7 +152,7 @@ func (r *lessonResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed: true,
 			},
 			"kind": schema.StringAttribute{
-				Default:  stringdefault.StaticString("legacy"),
+				Default:  stringdefault.StaticString("content"),
 				Optional: true,
 				Computed: true,
 			},
@@ -394,7 +394,7 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	_, err := resourceclients.GetLesson(r.client, int(state.Id.ValueInt64()))
+	lesson, err := resourceclients.GetLesson(r.client, int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Lesson Object",
@@ -403,6 +403,42 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// TODO: For now, nothing happens with the read elements. Should update state to confirm any changes necessary.
+	lesson.Attempts.If(func(val int) { state.Attempts = types.Int64Value(int64(val)) })
+	lesson.AvailableAt.If(func(val string) { state.AvailableAt = types.StringValue(val) })
+	lesson.DueAt.If(func(val string) { state.DueAt = types.StringValue(val) })
+	state.GradePassbackAutoSend = types.BoolValue(lesson.GradePassbackAutoSend)
+	state.GradePassbackMode = types.StringValue(lesson.GradePassbackMode)
+	lesson.GradePassbackScaleTo.If(func(val string) { state.GradePassbackScaleTo = types.StringValue(val) })
+	lesson.Index.If(func(val int) { state.Index = types.Int64Value(int64(val)) })
+	state.IsHidden = types.BoolValue(lesson.IsHidden)
+	state.IsTimed = types.BoolValue(lesson.IsTimed)
+	state.IsUnlisted = types.BoolValue(lesson.IsUnlisted)
+	state.Kind = types.StringValue(lesson.Kind)
+	state.LateSubmissions = types.BoolValue(lesson.LateSubmissions)
+	lesson.LockedAt.If(func(val string) { state.LockedAt = types.StringValue(val) })
+	lesson.ModuleId.If(func(val int) { state.ModuleId = types.Int64Value(int64(val)) })
+	state.Openable = types.BoolValue(lesson.Openable)
+	state.OpenableWithoutAttempt = types.BoolValue(lesson.OpenableWithoutAttempt)
+	state.Outline = types.StringValue(lesson.Outline)
+	state.Password = types.StringValue(lesson.Password)
+	state.QuizActiveStatus = types.StringValue(lesson.QuizSettings.QuizActiveStatus)
+	state.QuizMode = types.StringValue(lesson.QuizSettings.QuizMode)
+	state.QuizQuestionNumberStyle = types.StringValue(lesson.QuizSettings.QuizQuestionNumberStyle)
+	state.ReOpenSubmissions = types.BoolValue(lesson.ReOpenSubmissions)
+	state.ReleaseChallengeSolutions = types.BoolValue(lesson.ReleaseChallengeSolutions)
+	state.ReleaseChallengeSolutionsWhileActive = types.BoolValue(lesson.ReleaseChallengeSolutionsWhileActive)
+	state.ReleaseFeedback = types.BoolValue(lesson.ReleaseFeedback)
+	state.ReleaseFeedbackWhileActive = types.BoolValue(lesson.ReleaseFeedbackWhileActive)
+	state.ReleaseQuizCorrectnessOnly = types.BoolValue(lesson.ReleaseQuizCorrectnessOnly)
+	state.ReleaseQuizSolutions = types.BoolValue(lesson.ReleaseQuizSolutions)
+	state.RequireUserOverride = types.BoolValue(lesson.RequireUserOverride)
+	lesson.SolutionsAt.If(func(val string) { state.SolutionsAt = types.StringValue(val) })
+	state.State = types.StringValue(lesson.State)
+	state.TimerDuration = types.Int64Value(int64(lesson.TimerDuration))
+	state.TimerExpirationAccess = types.BoolValue(lesson.TimerExpirationAccess)
+	state.Title = types.StringValue(lesson.Title)
+	state.TutorialRegex = types.StringValue(lesson.TutorialRegex)
+	state.Type = types.StringValue(lesson.Type)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

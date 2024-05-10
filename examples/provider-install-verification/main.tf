@@ -23,7 +23,7 @@ resource "edstem_lesson" "testing" {
 
     index = 3
 
-    due_at = formatdate("YYYY-MM-DD'T'hh:mm:ss.000Z", "2023-10-28T23:45:54+11:00")
+    due_at = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", "2023-10-28T23:45:54+11:00")
 }
 
 resource "edstem_slide" "slide1" {
