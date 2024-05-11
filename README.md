@@ -45,10 +45,12 @@ go run main.go import_tf course my_course -c 12108
     * Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
+* Rubrics (These are different from Critera, which are functional)
 
 ## Cautionary areas
 
 * Ed/MD rendering hasn't been rigorously tested
+* The JSON fields can sometimes think they've changed when they haven't.
 * Some minor elements of the challenges api aren't fully understood, so some minor differences may occur when importing/re-applying.
 
 ## Development Notes
