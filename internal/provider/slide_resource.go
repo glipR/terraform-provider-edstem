@@ -3,10 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/md2ed"
 	"terraform-provider-edstem/internal/resourceclients"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -277,4 +280,33 @@ func (r *slideResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *slideResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+}
+
+func (r *slideResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ",")
+	if len(idParts) != 2 {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier to be two space separated integers: lesson_id,slide_id. Got: %q", req.ID),
+		)
+		return
+	}
+	lesson_id, err := strconv.Atoi(idParts[0])
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier to be two space separated integers: lesson_id,slide_id. Got: %q", req.ID),
+		)
+		return
+	}
+	slide_id, err := strconv.Atoi(idParts[1])
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier to be two space separated integers: lesson_id,slide_id. Got: %q", req.ID),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("lesson_id"), lesson_id)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), slide_id)...)
 }
