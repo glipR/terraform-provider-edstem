@@ -72,12 +72,20 @@ func resolveNodes(n *html.Node, content_folder string, save_images bool) string 
 		} else if n.Data == "img" {
 			src := ""
 			alt := ""
+			width := ""
+			height := ""
 			for _, attr := range n.Attr {
 				if attr.Key == "src" {
 					src = attr.Val
 				}
 				if attr.Key == "alt" {
 					alt = attr.Val
+				}
+				if attr.Key == "width" {
+					width = attr.Val
+				}
+				if attr.Key == "height" {
+					height = attr.Val
 				}
 			}
 			resp, err := http.Get(src)
@@ -96,6 +104,19 @@ func resolveNodes(n *html.Node, content_folder string, save_images bool) string 
 				defer out.Close()
 
 				io.Copy(out, resp.Body)
+			}
+			if width != "" || height != "" {
+				preblocks = append(preblocks, "{")
+				if width != "" {
+					preblocks = append(preblocks, fmt.Sprintf("width=\"%s\"", width))
+				}
+				if height != "" {
+					if width != "" {
+						preblocks = append(preblocks, " ")
+					}
+					preblocks = append(preblocks, fmt.Sprintf("height=\"%s\"", height))
+				}
+				preblocks = append(preblocks, "}\n")
 			}
 			preblocks = append(preblocks, "![")
 			if alt != "" {

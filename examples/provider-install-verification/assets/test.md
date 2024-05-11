@@ -27,4 +27,5 @@ fmt.Print("HELLO 123")
 {.callout type="info"}
 Info paragraph about **stuff**, and [things](https://google.com)
 
+{width="200" height="400"}
 ![alt text](assets/celeste.PNG)

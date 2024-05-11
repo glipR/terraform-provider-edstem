@@ -437,6 +437,70 @@ func (r *challengeResource) Create(ctx context.Context, req resource.CreateReque
 	}
 }
 
+func compareCriteria(crit1 []resourceclients.Criteria, crit2 []resourceclients.Criteria) bool {
+	if len(crit1) != len(crit2) {
+		return false
+	}
+	for i := range crit1 {
+		if crit1[i].Name != crit2[i].Name {
+			return false
+		}
+		if len(crit1[i].Levels) != len(crit2[i].Levels) {
+			return false
+		}
+		for j := range crit1[i].Levels {
+			if crit1[i].Levels[j].Description != crit2[i].Levels[j].Description {
+				return false
+			}
+			if crit1[i].Levels[j].Mark != crit2[i].Levels[j].Mark {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func compareTestCase(tc1 []resourceclients.TestCase, tc2 []resourceclients.TestCase) bool {
+	if len(tc1) != len(tc2) {
+		return false
+	}
+	for i := range tc1 {
+		if tc1[i].Description != tc2[i].Description ||
+			tc1[i].Hidden != tc2[i].Hidden ||
+			tc1[i].MaxScore != tc2[i].MaxScore ||
+			tc1[i].Name != tc2[i].Name ||
+			tc1[i].Private != tc2[i].Private ||
+			tc1[i].RunCommand.OrElse("") != tc2[i].RunCommand.OrElse("") ||
+			tc1[i].Score != tc2[i].Score ||
+			tc1[i].Skip != tc2[i].Skip ||
+			tc1[i].StdinPath != tc2[i].StdinPath ||
+			tc1[i].RunLimit.CpuTime.OrElse(0) != tc2[i].RunLimit.CpuTime.OrElse(0) ||
+			tc1[i].RunLimit.Pty.OrElse(false) != tc2[i].RunLimit.Pty.OrElse(false) {
+			return false
+		}
+		if len(tc1[i].Checks) != len(tc2[i].Checks) {
+			return false
+		}
+		if len(tc1[i].OutputFiles) != len(tc2[i].OutputFiles) {
+			return false
+		}
+		for j := range tc1[i].Checks {
+			if tc1[i].Checks[j].ExpectPath != tc2[i].Checks[j].ExpectPath ||
+				tc1[i].Checks[j].Markdown != tc2[i].Checks[j].Markdown ||
+				tc1[i].Checks[j].Name != tc2[i].Checks[j].Name ||
+				tc1[i].Checks[j].Type != tc2[i].Checks[j].Type {
+				return false
+			}
+		}
+		for j := range tc1[i].OutputFiles {
+			if tc1[i].OutputFiles[j] != tc2[i].OutputFiles[j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Read refreshes the Terraform state with the latest data.
 func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Retrieve values from state
@@ -463,14 +527,19 @@ func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.Check = types.BoolValue(challenge.Features.Check)
 	state.ConfirmSubmit = types.BoolValue(challenge.Features.ConfirmSubmit)
 	state.Connect = types.BoolValue(challenge.Features.Connect)
-	crit, err := json.MarshalIndent(challenge.Settings.Criteria, "", "  ")
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Criteria Object",
-			fmt.Sprintf("Could not read Criteria from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
-		)
+	var cur_state []resourceclients.Criteria
+	json.NewDecoder(strings.NewReader(state.Criteria.ValueString())).Decode(&cur_state)
+	if !compareCriteria(cur_state, challenge.Settings.Criteria) {
+		// Criteria are different, set the state.
+		crit, err := json.MarshalIndent(challenge.Settings.Criteria, "", "  ")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Reading Criteria Object",
+				fmt.Sprintf("Could not read Criteria from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
+			)
+		}
+		state.Criteria = types.StringValue(string(crit))
 	}
-	state.Criteria = types.StringValue(string(crit)) // TODO: We can probably go the other way and confirm if the json is the same.
 	challenge.Tickets.MarkCustom.RunLimit.CpuTime.If(func(val int64) { state.CustomMarkTimeLimitMS = types.Int64Value(val) })
 	state.CustomRunCommand = types.StringValue(challenge.Tickets.MarkCustom.RunCommand)
 	state.Editor = types.BoolValue(challenge.Features.Editor)
@@ -494,14 +563,19 @@ func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, 
 	state.TerminalCommand = types.StringValue(challenge.Settings.TerminalCommand)
 	state.TestCommand = types.StringValue(challenge.Settings.CheckCommand)
 	state.Terminal = types.BoolValue(challenge.Features.Terminal)
-	testcase, err := json.MarshalIndent(challenge.Tickets.MarkStandard.Testcases, "", "  ")
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Testcases Object",
-			fmt.Sprintf("Could not read Test cases from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
-		)
+	var cur_tests []resourceclients.TestCase
+	json.NewDecoder(strings.NewReader(state.TestcaseJSON.ValueString())).Decode(&cur_tests)
+	if !compareTestCase(cur_tests, challenge.Tickets.MarkStandard.Testcases) {
+		// Mismatching test case data.
+		testcase, err := json.MarshalIndent(challenge.Tickets.MarkStandard.Testcases, "", "  ")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Reading Testcases Object",
+				fmt.Sprintf("Could not read Test cases from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
+			)
+		}
+		state.TestcaseJSON = types.StringValue(string(testcase))
 	}
-	state.TestcaseJSON = types.StringValue(string(testcase))
 	state.TestcaseEasy = types.BoolValue(challenge.Tickets.MarkStandard.Easy)
 	state.TestcaseMarkAll = types.BoolValue(challenge.Tickets.MarkStandard.MarkAll)
 	state.TestcaseOverlayTestFiles = types.BoolValue(challenge.Tickets.MarkStandard.Overlay)

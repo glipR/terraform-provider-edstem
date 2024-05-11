@@ -10,36 +10,15 @@
 		"run_limit": {
 			"cpu_time": 3000,
 			"wall_time": 3000,
-			"pty_size": {
-				"rows": 0,
-				"cols": 0
-			}
+			"pty": null
 		},
-		"run_command": null,
+		"run_command": "",
 		"stdin_path": "1.in",
-		"extra_paths": null,
 		"checks": [
 			{
 				"name": "",
 				"type": "check_diff",
-				"source": {
-					"type": "source_mixed",
-					"file": ""
-				},
-				"transforms": [],
 				"expect_path": "1.out",
-				"acceptable_line_error_rate": 0,
-				"acceptable_char_error_rate": 0,
-				"acceptable_line_errors": 0,
-				"acceptable_char_errors": 0,
-				"regex_match": "",
-				"run_limit": {
-					"pty_size": {
-						"rows": 0,
-						"cols": 0
-					}
-				},
-				"run_command": "",
 				"markdown": false
 			}
 		],
@@ -54,38 +33,17 @@
 		"max_score": 0,
 		"skip": false,
 		"run_limit": {
-			"pty_size": {
-				"rows": 0,
-				"cols": 0
-			},
 			"cpu_time": null,
-			"wall_time": null
+			"wall_time": null,
+			"pty": null
 		},
-		"run_command": null,
+		"run_command": "",
 		"stdin_path": "1.in",
-		"extra_paths": null,
 		"checks": [
 			{
 				"name": "",
 				"type": "check_diff",
-				"source": {
-					"type": "source_mixed",
-					"file": ""
-				},
-				"transforms": [],
 				"expect_path": "1.out",
-				"acceptable_line_error_rate": 0,
-				"acceptable_char_error_rate": 0,
-				"acceptable_line_errors": 0,
-				"acceptable_char_errors": 0,
-				"regex_match": "",
-				"run_limit": {
-					"pty_size": {
-						"rows": 0,
-						"cols": 0
-					}
-				},
-				"run_command": "",
 				"markdown": false
 			}
 		],

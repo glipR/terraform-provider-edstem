@@ -41,14 +41,10 @@ go run main.go import_tf course my_course -c 12108
 
 * Terraform Actions:
     * Destroying objects
-    * Reading current state for diff
 * Slides
     * Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
-* Misc
-    * Images will always have a hardcoded width of 150
-
 
 ## Cautionary areas
 

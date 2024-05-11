@@ -128,9 +128,66 @@ func renderMathBlock(w io.Writer, p *ast.MathBlock, entering bool) {
 	}
 }
 
-func renderImgBlock(w io.Writer, p *ast.Image, id string, alt string, entering bool) {
-	// TODO: Don't use a fixed width
-	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\" width=\"150\" alt=\"%s\"/></figure>", id, alt))
+func renderImgBlock(w io.Writer, p *ast.Image, id string, alt string, width *string, height *string, entering bool) {
+	io.WriteString(w, fmt.Sprintf("<figure><image src=\"https://static.au.edusercontent.com/files/%s\"", id))
+	if alt != "" {
+		io.WriteString(w, fmt.Sprintf(" alt=\"%s\"", alt))
+	}
+	if width != nil {
+		io.WriteString(w, fmt.Sprintf(" width=\"%s\"", *width))
+	}
+	if height != nil {
+		io.WriteString(w, fmt.Sprintf(" height=\"%s\"", *height))
+	}
+	io.WriteString(w, "/></figure>")
+}
+
+func uploadImg(w io.Writer, img *ast.Image, para *ast.Paragraph) error {
+	path := string(img.Destination)
+	alt_text := string(img.Children[0].AsLeaf().Literal)
+
+	dat, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// Request an image link
+	// The course id doesn't matter.
+	var course_id = ""
+	var token = os.Getenv("EDSTEM_TOKEN")
+	var c, _ = client.NewClient(&course_id, &token)
+
+	boundary := "----WebKitFormBoundaryplBATvmbbo4b7Pet"
+	req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: image/png\n\n%s\n--%s--\n", boundary, path, dat, boundary)
+	actual_req := bytes.Buffer{}
+	actual_req.Write([]byte(req_text))
+
+	body, err := c.HTTPRequest("files", "POST", actual_req, &boundary)
+	if err != nil {
+		return err
+	}
+
+	resp_file := &ImgPostResponse{}
+	err = json.NewDecoder(body).Decode(resp_file)
+	if err != nil {
+		return err
+	}
+
+	var width *string
+	map_width, ok := para.Attrs["width"]
+	string_width := string(map_width)
+	if ok {
+		width = &string_width
+	}
+	var height *string
+	map_height, ok := para.Attrs["height"]
+	string_height := string(map_height)
+	if ok {
+		height = &string_height
+	}
+
+	renderImgBlock(w, img, resp_file.File.ID, alt_text, width, height, true)
+	return nil
 }
 
 type ImgPostResponse struct {
@@ -152,9 +209,16 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 	}
 	if para, ok := node.(*ast.Paragraph); ok {
 		for _, child := range node.AsContainer().Children {
-			if _, ok := child.(*ast.Image); ok {
+			if img, ok := child.(*ast.Image); ok {
 				// Images in paragraphs don't render.
-				return ast.GoToNext, true
+				if entering {
+					err := uploadImg(w, img, para)
+					if err != nil {
+						fmt.Println("ERROR", err)
+						return ast.Terminate, false
+					}
+				}
+				return ast.SkipChildren, true
 			}
 		}
 		renderParagraph(w, para, entering, para.AsContainer().Attribute)
@@ -188,45 +252,7 @@ func customHTMLRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkSt
 		renderListItem(w, listitem, entering)
 		return ast.GoToNext, true
 	}
-	if img, ok := node.(*ast.Image); ok {
-		if entering {
-			path := string(img.Destination)
-			alt_text := string(img.Children[0].AsLeaf().Literal)
-
-			dat, err := os.ReadFile(path)
-			if err != nil {
-				fmt.Println("ERROR", err)
-				return ast.Terminate, false
-			}
-
-			// Request an image link
-			// The course id doesn't matter.
-			var course_id = ""
-			var token = os.Getenv("EDSTEM_TOKEN")
-			var c, _ = client.NewClient(&course_id, &token)
-
-			boundary := "----WebKitFormBoundaryplBATvmbbo4b7Pet"
-			req_text := fmt.Sprintf("--%s\nContent-Disposition: form-data; name=\"attachment\"; filename=\"%s\"\nContent-Type: image/png\n\n%s\n--%s--\n", boundary, path, dat, boundary)
-			actual_req := bytes.Buffer{}
-			actual_req.Write([]byte(req_text))
-
-			body, e := c.HTTPRequest("files", "POST", actual_req, &boundary)
-			if e != nil {
-				fmt.Println("ERROR", e)
-				return ast.Terminate, false
-			}
-
-			resp_file := &ImgPostResponse{}
-			err = json.NewDecoder(body).Decode(resp_file)
-			if err != nil {
-				fmt.Println("ERROR", e)
-				return ast.Terminate, false
-			}
-
-			renderImgBlock(w, img, resp_file.File.ID, alt_text, entering)
-			return ast.SkipChildren, true
-		}
-
+	if _, ok := node.(*ast.Image); ok {
 		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
