@@ -97,7 +97,7 @@ func renderCodeBlock(w io.Writer, p *ast.CodeBlock, entering bool) {
 
 	if len(p.Info) == 0 {
 		io.WriteString(w, "<pre>")
-		io.WriteString(w, string(p.Literal))
+		io.WriteString(w, strings.ReplaceAll(string(bytes.Trim(p.Literal, "\n")), "\n", "\\n"))
 		io.WriteString(w, "</pre>")
 	} else {
 		fields := strings.FieldsFunc(string(p.Info), func(s rune) bool { return s == '.' })
@@ -109,7 +109,7 @@ func renderCodeBlock(w io.Writer, p *ast.CodeBlock, entering bool) {
 		}
 
 		io.WriteString(w, fmt.Sprintf("<snippet language=\"%s\" %s><snippet-file id=\"code\">", lang, extra))
-		io.WriteString(w, string(bytes.Trim(p.Literal, "\n")))
+		io.WriteString(w, strings.ReplaceAll(string(bytes.Trim(p.Literal, "\n")), "\n", "\\n"))
 		io.WriteString(w, "</snippet-file></snippet>")
 	}
 
@@ -243,5 +243,5 @@ func RenderMDToEd(content string) string {
 	p := parser.NewWithExtensions(extensions | parser.Attributes)
 	html := markdown.ToHTML([]byte(content), p, renderer)
 
-	return "<document version=\"2.0\">" + strings.ReplaceAll(strings.ReplaceAll(string(html), "\r", ""), "\n", "") + "</document>"
+	return "<document version=\"2.0\">" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(string(html), "\r", ""), "\n", ""), "\\n", "\n") + "</document>"
 }

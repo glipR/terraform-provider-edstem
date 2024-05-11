@@ -402,7 +402,6 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 	}
 
-	// TODO: For now, nothing happens with the read elements. Should update state to confirm any changes necessary.
 	lesson.Attempts.If(func(val int) { state.Attempts = types.Int64Value(int64(val)) })
 	lesson.AvailableAt.If(func(val string) { state.AvailableAt = types.StringValue(val) })
 	lesson.DueAt.If(func(val string) { state.DueAt = types.StringValue(val) })

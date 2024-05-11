@@ -195,7 +195,7 @@ func (r *slideResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	_, err := resourceclients.GetSlide(r.client, int(state.LessonId.ValueInt64()), int(state.Id.ValueInt64()))
+	slide, err := resourceclients.GetSlide(r.client, int(state.LessonId.ValueInt64()), int(state.Id.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Slide Object",
@@ -203,7 +203,35 @@ func (r *slideResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		)
 	}
 
-	// TODO: For now, nothing happens with the read elements. Should update state to confirm any changes necessary.
+	state.Content = types.StringValue(slide.Content)
+	if state.ContentType.ValueString() == "md" {
+		state.Content = types.StringValue(md2ed.RenderEdToMD(state.Content.ValueString(), "", false))
+	}
+	// The index reported by the slide endpoint is wrong.
+	// Should infer from the ordering in the lesson response instead.
+	slide_ids, err := resourceclients.GetSlideIds(r.client, int(state.LessonId.ValueInt64()))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Slide Indexes",
+			fmt.Sprintf("Could not read Lesson ID %d: %s", state.LessonId.ValueInt64(), err.Error()),
+		)
+	}
+	for index, slide_id := range slide_ids {
+		if slide_id == int(state.Id.ValueInt64()) {
+			state.Index = types.Int64Value(int64(index + 1))
+		}
+	}
+
+	state.IsHidden = types.BoolValue(slide.IsHidden)
+	state.Title = types.StringValue(slide.Title)
+	state.Type = types.StringValue(slide.Type)
+	if slide.Type == "html" {
+		slide.Html.If(func(val string) { state.Content = types.StringValue(val) })
+	} else if slide.Type == "video" {
+		slide.VideoUrl.If(func(val string) { state.Url = types.StringValue(val) })
+	} else if slide.Type == "webpage" {
+		slide.Url.If(func(val string) { state.Url = types.StringValue(val) })
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
