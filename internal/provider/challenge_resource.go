@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -175,10 +177,14 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed: true,
 			},
 			"max_submissions_per_interval": schema.Int64Attribute{
+				Default:  int64default.StaticInt64(0),
 				Optional: true,
+				Computed: true,
 			},
 			"attempt_limit_interval": schema.Int64Attribute{
+				Default:  int64default.StaticInt64(0),
 				Optional: true,
+				Computed: true,
 			},
 			"only_git_submission": schema.BoolAttribute{
 				Default:  booldefault.StaticBool(false),
@@ -194,10 +200,14 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional: true,
 			},
 			"passback_max_automatic_score": schema.Float64Attribute{
+				Default:  float64default.StaticFloat64(0),
 				Optional: true,
+				Computed: true,
 			},
 			"passback_scale_to": schema.Float64Attribute{
+				Default:  float64default.StaticFloat64(0),
 				Optional: true,
+				Computed: true,
 			},
 			"feature_run": schema.BoolAttribute{
 				Default:  booldefault.StaticBool(true),
@@ -278,7 +288,9 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional: true,
 			},
 			"testcase_json": schema.StringAttribute{
+				Default:  stringdefault.StaticString("[]"),
 				Optional: true,
+				Computed: true,
 			},
 			"testcase_pty": schema.BoolAttribute{
 				Default:  booldefault.StaticBool(false),
@@ -301,7 +313,9 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed: true,
 			},
 			"criteria": schema.StringAttribute{
+				Default:  stringdefault.StaticString("[]"),
 				Optional: true,
+				Computed: true,
 			},
 		},
 	}
@@ -431,7 +445,7 @@ func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	_, err := resourceclients.GetChallenge(r.client, int(state.LessonId.ValueInt64()), int(state.SlideId.ValueInt64()))
+	challenge, err := resourceclients.GetChallenge(r.client, int(state.LessonId.ValueInt64()), int(state.SlideId.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Challenge Object",
@@ -439,7 +453,58 @@ func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, 
 		)
 	}
 
-	// TODO: For now, nothing happens with the read elements. Should update state to confirm any changes necessary.
+	state.AllowSubmitAfterMarkingLimit = types.BoolValue(challenge.Settings.AllowSubmitAfterMarkingLimit)
+	state.AnonymousSubmissions = types.BoolValue(challenge.Features.AnonymousSubmissions)
+	state.Arguments = types.BoolValue(challenge.Features.Arguments)
+	state.AttemptLimitInterval = types.Int64Value(int64(challenge.Settings.AttemptLimitInterval))
+	state.BuildCommand = types.StringValue(challenge.Settings.BuildCommand)
+	state.Check = types.BoolValue(challenge.Features.Check)
+	state.ConfirmSubmit = types.BoolValue(challenge.Features.ConfirmSubmit)
+	state.Connect = types.BoolValue(challenge.Features.Connect)
+	crit, err := json.MarshalIndent(challenge.Settings.Criteria, "", "  ")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Criteria Object",
+			fmt.Sprintf("Could not read Criteria from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
+		)
+	}
+	state.Criteria = types.StringValue(string(crit)) // TODO: We can probably go the other way and confirm if the json is the same.
+	challenge.Tickets.MarkCustom.RunLimit.CpuTime.If(func(val int64) { state.CustomMarkTimeLimitMS = types.Int64Value(val) })
+	state.CustomRunCommand = types.StringValue(challenge.Tickets.MarkCustom.RunCommand)
+	state.Editor = types.BoolValue(challenge.Features.Editor)
+	state.Explanation = types.StringValue(challenge.Explanation)
+	state.Feedback = types.BoolValue(challenge.Features.Feedback)
+	// TODO: Check the challenge folder contents and compare.
+	state.GitSubmission = types.BoolValue(challenge.Features.GitSubmission)
+	state.IntermediateFiles = types.BoolValue(challenge.Features.IntermediateFiles)
+	state.ManualCompletion = types.BoolValue(challenge.Features.ManualCompletion)
+	state.Mark = types.BoolValue(challenge.Features.Mark)
+	state.MaxSubmissionsPerInterval = types.Int64Value(int64(challenge.Settings.MaxSubmissionsPerInterval))
+	state.OnlyGitSubmission = types.BoolValue(challenge.Settings.OnlyGitSubmission)
+	state.PassbackMaxAutomaticScore = types.Float64Value(challenge.Settings.Passback.MaxAutomaticScore)
+	state.PassbackScaleTo = types.Float64Value(challenge.Settings.Passback.ScaleTo)
+	state.PassbackScoringMode = types.StringValue(challenge.Settings.Passback.ScoringMode)
+	state.PerTestcaseScores = types.BoolValue(challenge.Settings.PerTestCaseScores)
+	state.RemoteDesktop = types.BoolValue(challenge.Features.RemoteDesktop)
+	state.Run = types.BoolValue(challenge.Features.Run)
+	state.RunBeforeSubmit = types.BoolValue(challenge.Features.RunBeforeSubmit)
+	state.RunCommand = types.StringValue(challenge.Settings.RunCommand)
+	state.TerminalCommand = types.StringValue(challenge.Settings.TerminalCommand)
+	state.TestCommand = types.StringValue(challenge.Settings.CheckCommand)
+	state.Terminal = types.BoolValue(challenge.Features.Terminal)
+	testcase, err := json.MarshalIndent(challenge.Tickets.MarkStandard.Testcases, "", "  ")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Testcases Object",
+			fmt.Sprintf("Could not read Test cases from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
+		)
+	}
+	state.TestcaseJSON = types.StringValue(string(testcase))
+	state.TestcaseEasy = types.BoolValue(challenge.Tickets.MarkStandard.Easy)
+	state.TestcaseMarkAll = types.BoolValue(challenge.Tickets.MarkStandard.MarkAll)
+	state.TestcaseOverlayTestFiles = types.BoolValue(challenge.Tickets.MarkStandard.Overlay)
+	challenge.Tickets.MarkStandard.RunLimit.Pty.If(func(val bool) { state.TestcasePty = types.BoolValue(val) })
+	state.Type = types.StringValue(challenge.Type)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
