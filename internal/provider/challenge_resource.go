@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/md2ed"
 	"terraform-provider-edstem/internal/resourceclients"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -116,10 +117,9 @@ type challengeResourceModel struct {
 	TestcaseMarkAll          types.Bool   `tfsdk:"testcase_mark_all"`
 	TestcaseOverlayTestFiles types.Bool   `tfsdk:"testcase_overlay_test_files"`
 
-	Criteria types.String `tfsdk:"criteria"`
-
-	// TODO:
-	// * Test cases for the standard marking procedure
+	Criteria     types.String `tfsdk:"criteria"`
+	Rubric       types.String `tfsdk:"rubric"`
+	RubricPoints types.Int64  `tfsdk:"rubric_points"`
 }
 
 // Schema defines the schema for the resource.
@@ -319,18 +319,26 @@ func (r *challengeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional: true,
 				Computed: true,
 			},
+			"rubric": schema.StringAttribute{
+				Default:  stringdefault.StaticString("{}"),
+				Optional: true,
+				Computed: true,
+			},
+			"rubric_points": schema.Int64Attribute{
+				Optional: true,
+			},
 		},
 	}
 }
 
-func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *client.Client) (*resourceclients.Challenge, error) {
+func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *client.Client) (*resourceclients.Challenge, *resourceclients.Rubric, error) {
 
 	lesson_id := model.LessonId.ValueInt64()
 	slide_id := model.SlideId.ValueInt64()
 
-	chal, err := resourceclients.GetChallenge(client, int(lesson_id), int(slide_id))
+	chal, rubric, err := resourceclients.GetChallengeAndRubric(client, int(lesson_id), int(slide_id))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	chal.Type = model.Type.ValueString()
@@ -381,7 +389,7 @@ func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *clie
 			resp := &[]resourceclients.TestCase{}
 			err = json.NewDecoder(strings.NewReader(testcases)).Decode(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			chal.Tickets.MarkStandard.Testcases = *resp
 		}
@@ -401,12 +409,34 @@ func (model *challengeResourceModel) MapAPIObj(ctx context.Context, client *clie
 		var crit []resourceclients.Criteria
 		err = json.NewDecoder(strings.NewReader(model.Criteria.ValueString())).Decode(&crit)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		chal.Settings.Criteria = crit
 	}
 
-	return chal, nil
+	if !model.Rubric.IsNull() {
+		rubric_data := &resourceclients.Rubric{}
+		err = json.NewDecoder(strings.NewReader(model.Rubric.ValueString())).Decode(&rubric_data)
+		if err != nil {
+			return nil, nil, err
+		}
+		// TODO: Update but keep ids
+		for i, section := range rubric_data.Sections {
+			for j, item := range section.Items {
+				rubric_data.Sections[i].Items[j].Title = md2ed.RenderMDToEd(item.Title)
+			}
+		}
+		for i, item := range rubric_data.UnsectionedItems {
+			rubric_data.UnsectionedItems[i].Title = md2ed.RenderMDToEd(item.Title)
+		}
+		rubric = rubric_data
+
+		if !model.RubricPoints.IsNull() {
+			chal.RubricPoints.Set(int(model.RubricPoints.ValueInt64()))
+		}
+	}
+
+	return chal, rubric, nil
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -419,7 +449,7 @@ func (r *challengeResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	api_obj, err := plan.MapAPIObj(ctx, r.client)
+	api_obj, rubric, err := plan.MapAPIObj(ctx, r.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Challenge Object",
@@ -428,7 +458,7 @@ func (r *challengeResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	resourceclients.UpdateChallenge(r.client, plan.FolderPath.ValueString(), api_obj)
+	resourceclients.UpdateChallenge(r.client, plan.FolderPath.ValueString(), api_obj, rubric)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -511,12 +541,13 @@ func (r *challengeResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	challenge, err := resourceclients.GetChallenge(r.client, int(state.LessonId.ValueInt64()), int(state.SlideId.ValueInt64()))
+	challenge, _, err := resourceclients.GetChallengeAndRubric(r.client, int(state.LessonId.ValueInt64()), int(state.SlideId.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Challenge Object",
 			fmt.Sprintf("Could not read Challenge from Slide ID %d: %s", state.SlideId.ValueInt64(), err.Error()),
 		)
+		return
 	}
 
 	state.AllowSubmitAfterMarkingLimit = types.BoolValue(challenge.Settings.AllowSubmitAfterMarkingLimit)
@@ -599,15 +630,16 @@ func (r *challengeResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	api_obj, err := plan.MapAPIObj(ctx, r.client)
+	api_obj, rubric, err := plan.MapAPIObj(ctx, r.client)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Challenge Object",
 			fmt.Sprintf("Could not update Challenge: %s", err.Error()),
 		)
+		return
 	}
 
-	resourceclients.UpdateChallenge(r.client, plan.FolderPath.ValueString(), api_obj)
+	resourceclients.UpdateChallenge(r.client, plan.FolderPath.ValueString(), api_obj, rubric)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

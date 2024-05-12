@@ -1,0 +1,37 @@
+{
+    "positive_grading": true,
+    "sections": [
+        {
+            "index": 1,
+            "mark_clamp": 6,
+            "select_one": false,
+            "title": "section",
+            "items": [
+                {
+                    "index": 0,
+                    "points": 4,
+                    "staff_description": "First Subitem",
+                    "title": "**BOLD**"
+                }, {
+                    "index": 0,
+                    "points": 4,
+                    "staff_description": "Second Subitem",
+                    "title": "# Header\n\n ```\ncode\n```"
+                }
+            ]
+        }
+    ],
+    "unsectioned_items": [
+        {
+            "index": 0,
+            "points": 1,
+            "staff_description": "First item",
+            "title": "[here](https://google.com)"
+        }, {
+            "index": 2,
+            "points": 4,
+            "staff_description": "Second item",
+            "title": "*Italics*"
+        }
+    ]
+}

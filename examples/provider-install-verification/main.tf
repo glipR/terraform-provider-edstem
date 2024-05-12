@@ -63,7 +63,9 @@ resource "edstem_challenge" "slide3_code" {
     feature_anonymous_submissions = true
     feature_manual_completion = false
 
-    criteria = file("assets/criteria.json")
+    // criteria = file("assets/criteria.json")
+    rubric = file("assets/rubric.json")
+    rubric_points = 11
 }
 
 resource "edstem_slide" "slide4" {

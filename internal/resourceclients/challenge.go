@@ -15,16 +15,46 @@ import (
 )
 
 type Challenge struct {
-	Id          int            `json:"id"`
-	CourseId    int            `json:"course_id"`
-	LessonId    optional.Int64 `json:"lesson_id"`
-	SlideId     optional.Int64 `json:"slide_id"`
-	Type        string         `json:"type"`
-	Explanation string         `json:"explanation"`
+	Id           int            `json:"id"`
+	CourseId     int            `json:"course_id"`
+	LessonId     optional.Int64 `json:"lesson_id"`
+	SlideId      optional.Int64 `json:"slide_id"`
+	Type         string         `json:"type"`
+	Explanation  string         `json:"explanation"`
+	RubricId     optional.Int   `json:"rubric_id"`
+	RubricPoints optional.Int   `json:"rubric_points"`
 
 	Features ChallengeFeatures `json:"features"`
 	Settings ChallengeSettings `json:"settings"`
 	Tickets  ChallengeTickets  `json:"tickets"`
+}
+
+type RubricResponse struct {
+	Rubric Rubric `json:"rubric"`
+}
+
+type Rubric struct {
+	PositiveGrading  bool            `json:"positive_grading"`
+	Id               optional.Int    `json:"id"`
+	Sections         []RubricSection `json:"sections"`
+	UnsectionedItems []RubricItem    `json:"unsectioned_items"`
+}
+
+type RubricSection struct {
+	Id        optional.Int   `json:"id"`
+	SelectOne bool           `json:"bool"`
+	MarkClamp optional.Int64 `json:"mark_clamp"`
+	Title     string         `json:"title"`
+	Index     int            `json:"index"`
+	Items     []RubricItem   `json:"items"`
+}
+
+type RubricItem struct {
+	Id               optional.Int `json:"id"`
+	Points           int          `json:"points"`
+	Title            string       `json:"title"`
+	StaffDescription string       `json:"staff_description"`
+	Index            int          `json:"index"`
 }
 
 type ChallengeFeatures struct {
@@ -176,15 +206,15 @@ type TicketResponse struct {
 	Ticket string `json:"ticket"`
 }
 
-func GetChallenge(c *client.Client, lesson_id int, slide_id int) (*Challenge, error) {
+func GetChallengeAndRubric(c *client.Client, lesson_id int, slide_id int) (*Challenge, *Rubric, error) {
 	body, err := c.HTTPRequest(fmt.Sprintf("lessons/%d?view=1", lesson_id), "GET", bytes.Buffer{}, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	resp := &LessonWithSlidesResponse{}
 	err = json.NewDecoder(body).Decode(resp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	challenge_id := 0
 	slides := resp.Lesson.Slides
@@ -194,31 +224,46 @@ func GetChallenge(c *client.Client, lesson_id int, slide_id int) (*Challenge, er
 			tempVar, _ := json.Marshal(slides[i])
 			err = json.Unmarshal(tempVar, &slideObj)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			// Not returned from response - intuited from request.
 			slideObj.LessonId = lesson_id
 			if !slideObj.ChallengeId.Present() {
-				return nil, fmt.Errorf("Challenge for Slide %d Not Found", slideObj.Id)
+				return nil, nil, fmt.Errorf("Challenge for Slide %d Not Found", slideObj.Id)
 			}
 			challenge_id = slideObj.ChallengeId.MustGet()
 			body, err = c.HTTPRequest(fmt.Sprintf("challenges/%d?view=1", challenge_id), "GET", bytes.Buffer{}, nil)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			resp := &ChallegeResponseJSON{}
 			err = json.NewDecoder(body).Decode(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			return &resp.Challenge, nil
+			resp.Challenge.LessonId.Set(int64(lesson_id))
+			resp.Challenge.SlideId.Set(int64(slide_id))
+			// Rubric Data
+			var rubric *RubricResponse
+			resp.Challenge.RubricId.If(func(val int) {
+				body, err = c.HTTPRequest(fmt.Sprintf("rubrics/%d", val), "GET", bytes.Buffer{}, nil)
+				rubric = &RubricResponse{}
+				err = json.NewDecoder(body).Decode(&rubric)
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if rubric == nil {
+				return &resp.Challenge, nil, nil
+			}
+			return &resp.Challenge, &rubric.Rubric, nil
 		}
 	}
 
-	return nil, fmt.Errorf("Challenge for Slide %d Not Found", slide_id)
+	return nil, nil, fmt.Errorf("Challenge for Slide %d Not Found", slide_id)
 }
 
-func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challenge) error {
+func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challenge, rubric *Rubric) error {
 	dir_entries, err := os.ReadDir(folder_path)
 	if err != nil {
 		return err
@@ -236,16 +281,54 @@ func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challen
 	if err != nil {
 		return err
 	}
-	_, patch_err := conn.HTTPRequest(fmt.Sprintf("challenges/%d", challenge.Id), "PATCH", buf, nil)
+	body, patch_err := conn.HTTPRequest(fmt.Sprintf("challenges/%d", challenge.Id), "PATCH", buf, nil)
 	if patch_err != nil {
 		return patch_err
+	}
+
+	resp := &ChallegeResponseJSON{}
+	err = json.NewDecoder(body).Decode(resp)
+	if err != nil {
+		return err
+	}
+
+	if rubric != nil {
+		rubric.Id.Set(resp.Challenge.Id)
+		challenge.RubricId = resp.Challenge.RubricId
+		if challenge.RubricId.Present() {
+			// Update
+			var request = &RubricResponse{}
+			request.Rubric = *rubric
+			buf := bytes.Buffer{}
+			err = json.NewEncoder(&buf).Encode(request)
+			if err != nil {
+				return err
+			}
+			_, err := conn.HTTPRequest(fmt.Sprintf("rubrics/%d", challenge.RubricId.MustGet()), "PUT", buf, nil)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Create
+			var request = &RubricResponse{}
+			request.Rubric = *rubric
+			buf := bytes.Buffer{}
+			err = json.NewEncoder(&buf).Encode(request)
+			if err != nil {
+				return err
+			}
+			_, err := conn.HTTPRequest(fmt.Sprintf("markable/%d/rubric?replace=false", challenge.LessonId.MustGet()), "PUT", buf, nil)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
 func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, slide_resource_name *string, lesson_resource_name *string) (string, error) {
-	chal, err := GetChallenge(c, lesson_id, slide_id)
+	chal, rubric, err := GetChallengeAndRubric(c, lesson_id, slide_id)
 	if err != nil {
 		return "", err
 	}
@@ -388,6 +471,20 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 		}
 		f.WriteString(buf.String())
 		resource_string = resource_string + fmt.Sprintf("\tcriteria = file(\"%s\")\n", content_path)
+	}
+	if rubric != nil {
+		var buf = bytes.Buffer{}
+		err = json.NewEncoder(&buf).Encode(rubric)
+		if err != nil {
+			return "", err
+		}
+		content_path := path.Join(folder_path, "rubric.json")
+		f, e := os.Create(content_path)
+		if e != nil {
+			return "", e
+		}
+		f.WriteString(buf.String())
+		resource_string = resource_string + fmt.Sprintf("\trubric = file(\"%s\")\n", content_path)
 	}
 
 	if len(chal.Tickets.MarkStandard.Testcases) > 0 {

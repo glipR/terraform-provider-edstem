@@ -402,6 +402,7 @@ func (r *lessonResource) Read(ctx context.Context, req resource.ReadRequest, res
 			"Error Reading Lesson Object",
 			fmt.Sprintf("Could not read Lesson ID %d: %s", state.Id.ValueInt64(), err.Error()),
 		)
+		return
 	}
 
 	lesson.Attempts.If(func(val int) { state.Attempts = types.Int64Value(int64(val)) })

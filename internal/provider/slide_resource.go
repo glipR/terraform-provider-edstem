@@ -204,6 +204,7 @@ func (r *slideResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			"Error Reading Slide Object",
 			fmt.Sprintf("Could not read Slide ID %d: %s", state.Id.ValueInt64(), err.Error()),
 		)
+		return
 	}
 
 	state.Content = types.StringValue(slide.Content)

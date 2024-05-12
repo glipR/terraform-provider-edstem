@@ -39,13 +39,14 @@ go run main.go import_tf course my_course -c 12108
 
 ## Currently not functional components
 
+* REAPPLYING A RUBRIC MARKED ASSESSMENT MAY REMOVE RECORDED FEEDBACK/MARKS
 * Terraform Actions:
     * Destroying objects
 * Slides
     * Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
-* Rubrics (These are different from Critera, which are functional)
+* Terraform is unaware if the rubric is changed in Ed (It will always try to reapply)
 
 ## Cautionary areas
 
