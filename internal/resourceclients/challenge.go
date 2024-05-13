@@ -9,6 +9,7 @@ import (
 
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/md2ed"
+	"terraform-provider-edstem/internal/tfhelpers"
 	"terraform-provider-edstem/internal/wshelpers"
 
 	"github.com/markphelps/optional"
@@ -327,31 +328,28 @@ func UpdateChallenge(conn *client.Client, folder_path string, challenge *Challen
 	return nil
 }
 
-func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, slide_resource_name *string, lesson_resource_name *string) (string, error) {
+func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, slide_resource_name *string, lesson_resource_name *string) (string, []string, error) {
 	chal, rubric, err := GetChallengeAndRubric(c, lesson_id, slide_id)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
+	resources := make([]string, 0)
+	resources = append(resources, fmt.Sprintf("edstem_challenge.%s %d,%d", resource_name, lesson_id, slide_id))
 	var resource_string = fmt.Sprintf("resource \"edstem_challenge\" %s {\n", resource_name)
 	if slide_resource_name != nil {
-		resource_string = resource_string + fmt.Sprintf("\tslide_id = edstem_slide.%s.id\n", *slide_resource_name)
+		resource_string = resource_string + tfhelpers.TFUnquote("slide_id", fmt.Sprintf("edstem_slide.%s.id\n", *slide_resource_name))
 	} else {
-		resource_string = resource_string + fmt.Sprintf("\tslide_id = %d\n", slide_id)
+		resource_string = resource_string + tfhelpers.TFProp("slide_id", slide_id, "")
 	}
 	if lesson_resource_name != nil {
-		resource_string = resource_string + fmt.Sprintf("\tlesson_id = edstem_lesson.%s.id\n", *lesson_resource_name)
+		resource_string = resource_string + tfhelpers.TFUnquote("lesson_id", fmt.Sprintf("edstem_lesson.%s.id\n", *lesson_resource_name))
 	} else {
-		resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", lesson_id)
+		resource_string = resource_string + tfhelpers.TFProp("lesson_id", lesson_id, "")
 	}
 
 	if chal.Explanation != "" {
 		content_path := path.Join(folder_path, "explanation.md")
-		f, e := os.Create(content_path)
-		if e != nil {
-			return "", e
-		}
-		f.WriteString(md2ed.RenderEdToMD(chal.Explanation, folder_path, true))
-		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
+		resource_string = resource_string + tfhelpers.TFFile("content", md2ed.RenderEdToMD(chal.Explanation, folder_path, true), content_path)
 	}
 
 	var repos = []string{"scaffold", "solution", "testbase"}
@@ -359,163 +357,81 @@ func ChallengeToTerraform(c *client.Client, lesson_id int, slide_id int, resourc
 	for _, repo := range repos {
 		err = wshelpers.ReadChallengeRepo(c, chal.Id, folder_path, repo)
 		if err != nil {
-			return "", err
+			return "", []string{}, err
 		}
 	}
 
-	resource_string = resource_string + fmt.Sprintf("\tfolder_path = \"%s\"\n", folder_path)
-	resource_string = resource_string + fmt.Sprintf("\tfolder_sha = sha1(join(\"\", [for f in fileset(path.cwd, \"%s/**\"): filesha1(\"${path.cwd}/${f}\")]))\n", folder_path)
-	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", chal.Type)
+	resource_string = resource_string + tfhelpers.TFProp("folder_path", folder_path, "")
+	resource_string = resource_string + tfhelpers.TFUnquote("folder_sha", fmt.Sprintf("sha1(join(\"\", [for f in fileset(path.cwd, \"%s/**\"): filesha1(\"${path.cwd}/${f}\")]))\n", folder_path))
+	resource_string = resource_string + tfhelpers.TFProp("type", chal.Type, "")
 
-	if chal.Settings.BuildCommand != "" {
-		resource_string = resource_string + fmt.Sprintf("\tbuild_command = \"%s\"\n", chal.Settings.BuildCommand)
-	}
-	if chal.Settings.RunCommand != "" {
-		resource_string = resource_string + fmt.Sprintf("\trun_command = \"%s\"\n", chal.Settings.RunCommand)
-	}
-	if chal.Settings.CheckCommand != "" {
-		resource_string = resource_string + fmt.Sprintf("\ttest_command = \"%s\"\n", chal.Settings.CheckCommand)
-	}
-	if chal.Settings.TerminalCommand != "" {
-		resource_string = resource_string + fmt.Sprintf("\tterminal_command = \"%s\"\n", chal.Settings.TerminalCommand)
-	}
+	resource_string = resource_string + tfhelpers.TFProp("build_command", chal.Settings.BuildCommand, "")
+	resource_string = resource_string + tfhelpers.TFProp("run_command", chal.Settings.RunCommand, "")
+	resource_string = resource_string + tfhelpers.TFProp("test_command", chal.Settings.CheckCommand, "")
+	resource_string = resource_string + tfhelpers.TFProp("terminal_command", chal.Settings.TerminalCommand, "")
+	resource_string = resource_string + tfhelpers.TFProp("custom_run_command", chal.Tickets.MarkCustom.RunCommand, "")
 
-	if chal.Tickets.MarkCustom.RunCommand != "" {
-		resource_string = resource_string + fmt.Sprintf("\tcustom_run_command = \"%s\"\n", chal.Tickets.MarkCustom.RunCommand)
-	}
+	resource_string = resource_string + tfhelpers.TFProp("per_testcase_scores", chal.Settings.PerTestCaseScores, false)
+	resource_string = resource_string + tfhelpers.TFProp("max_submissions_per_interval", chal.Settings.MaxSubmissionsPerInterval, 0)
+	resource_string = resource_string + tfhelpers.TFProp("attempt_limit_interval", chal.Settings.AttemptLimitInterval, 0)
+	resource_string = resource_string + tfhelpers.TFProp("only_git_submission", chal.Settings.OnlyGitSubmission, false)
+	resource_string = resource_string + tfhelpers.TFProp("allow_submit_after_marking_limit", chal.Settings.AllowSubmitAfterMarkingLimit, false)
 
-	if chal.Settings.PerTestCaseScores {
-		resource_string = resource_string + fmt.Sprintf("\tper_testcase_scores = %t\n", chal.Settings.PerTestCaseScores)
-	}
-	if chal.Settings.MaxSubmissionsPerInterval != 0 {
-		resource_string = resource_string + fmt.Sprintf("\tmax_submissions_per_interval = %d\n", chal.Settings.MaxSubmissionsPerInterval)
-	}
-	if chal.Settings.AttemptLimitInterval != 0 {
-		resource_string = resource_string + fmt.Sprintf("\tattempt_limit_interval = %d\n", chal.Settings.AttemptLimitInterval)
-	}
-	if chal.Settings.OnlyGitSubmission {
-		resource_string = resource_string + fmt.Sprintf("\tonly_git_submission = %t\n", chal.Settings.OnlyGitSubmission)
-	}
-	if chal.Settings.AllowSubmitAfterMarkingLimit {
-		resource_string = resource_string + fmt.Sprintf("\tallow_submit_after_marking_limit = %t\n", chal.Settings.AllowSubmitAfterMarkingLimit)
-	}
-	if chal.Settings.Passback.ScoringMode != "" {
-		resource_string = resource_string + fmt.Sprintf("\tpassback_scoring_mode = \"%s\"\n", chal.Settings.Passback.ScoringMode)
-	}
-	if chal.Settings.Passback.MaxAutomaticScore != 0 {
-		resource_string = resource_string + fmt.Sprintf("\tpassback_max_automatic_score = %f\n", chal.Settings.Passback.MaxAutomaticScore)
-	}
-	if chal.Settings.Passback.ScaleTo != 0 {
-		resource_string = resource_string + fmt.Sprintf("\tpassback_max_automatic_score = %f\n", chal.Settings.Passback.ScaleTo)
-	}
+	resource_string = resource_string + tfhelpers.TFProp("passback_scoring_mode", chal.Settings.Passback.ScoringMode, "")
+	resource_string = resource_string + tfhelpers.TFProp("passback_max_automatic_score", chal.Settings.Passback.MaxAutomaticScore, float64(0))
+	resource_string = resource_string + tfhelpers.TFProp("passback_scale_to", chal.Settings.Passback.ScaleTo, float64(0))
 
-	if !chal.Features.Run {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_run = %t\n", chal.Features.Run)
-	}
-	if !chal.Features.Check {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_check = %t\n", chal.Features.Check)
-	}
-	if !chal.Features.Mark {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_mark = %t\n", chal.Features.Mark)
-	}
-	if !chal.Features.Connect {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_connect = %t\n", chal.Features.Connect)
-	}
-	if !chal.Features.Terminal {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_terminal = %t\n", chal.Features.Terminal)
-	}
-	if !chal.Features.Feedback {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_feedback = %t\n", chal.Features.Feedback)
-	}
-	if chal.Features.ManualCompletion {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_manual_completion = %t\n", chal.Features.ManualCompletion)
-	}
-	if chal.Features.AnonymousSubmissions {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_anonymous_submissions = %t\n", chal.Features.AnonymousSubmissions)
-	}
-	if chal.Features.Arguments {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_arguments = %t\n", chal.Features.Arguments)
-	}
-	if chal.Features.ConfirmSubmit {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_confirm_submit = %t\n", chal.Features.ConfirmSubmit)
-	}
-	if chal.Features.RunBeforeSubmit {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_run_before_submit = %t\n", chal.Features.RunBeforeSubmit)
-	}
-	if chal.Features.GitSubmission {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_git_submission = %t\n", chal.Features.GitSubmission)
-	}
-	if !chal.Features.Editor {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_editor = %t\n", chal.Features.Editor)
-	}
-	if chal.Features.RemoteDesktop {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_remote_desktop = %t\n", chal.Features.RemoteDesktop)
-	}
-	if chal.Features.IntermediateFiles {
-		resource_string = resource_string + fmt.Sprintf("\tfeature_intermediate_files = %t\n", chal.Features.IntermediateFiles)
-	}
-	chal.Tickets.MarkCustom.RunLimit.CpuTime.If(func(val int64) {
-		resource_string = resource_string + fmt.Sprintf("\tcustom_mark_time_limit_ms = %d\n", val)
-	})
+	resource_string = resource_string + tfhelpers.TFProp("feature_run", chal.Features.Run, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_check", chal.Features.Check, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_mark", chal.Features.Mark, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_connect", chal.Features.Connect, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_terminal", chal.Features.Terminal, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_feedback", chal.Features.Feedback, true)
+	resource_string = resource_string + tfhelpers.TFProp("feature_editor", chal.Features.Editor, true)
+
+	resource_string = resource_string + tfhelpers.TFProp("feature_manual_completion", chal.Features.ManualCompletion, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_anonymous_submissions", chal.Features.AnonymousSubmissions, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_arguments", chal.Features.Arguments, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_confirm_submit", chal.Features.ConfirmSubmit, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_run_before_submit", chal.Features.RunBeforeSubmit, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_git_submission", chal.Features.GitSubmission, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_remote_desktop", chal.Features.RemoteDesktop, false)
+	resource_string = resource_string + tfhelpers.TFProp("feature_intermediate_files", chal.Features.IntermediateFiles, false)
+
+	resource_string = resource_string + tfhelpers.TFProp("custom_mark_time_limit_ms", chal.Tickets.MarkCustom.RunLimit.CpuTime, optional.Int64{})
 
 	if len(chal.Settings.Criteria) > 0 {
-		var buf = bytes.Buffer{}
-		err = json.NewEncoder(&buf).Encode(chal.Settings.Criteria)
+		res, err := json.MarshalIndent(chal.Settings.Criteria, "", "  ")
 		if err != nil {
-			return "", err
+			return "", []string{}, err
 		}
 		content_path := path.Join(folder_path, "criteria.json")
-		f, e := os.Create(content_path)
-		if e != nil {
-			return "", e
-		}
-		f.WriteString(buf.String())
-		resource_string = resource_string + fmt.Sprintf("\tcriteria = file(\"%s\")\n", content_path)
+		resource_string = resource_string + tfhelpers.TFFile("criteria", string(res), content_path)
 	}
 	if rubric != nil {
-		var buf = bytes.Buffer{}
-		err = json.NewEncoder(&buf).Encode(rubric)
+		res, err := json.MarshalIndent(rubric, "", "  ")
 		if err != nil {
-			return "", err
+			return "", []string{}, err
 		}
 		content_path := path.Join(folder_path, "rubric.json")
-		f, e := os.Create(content_path)
-		if e != nil {
-			return "", e
-		}
-		f.WriteString(buf.String())
-		resource_string = resource_string + fmt.Sprintf("\trubric = file(\"%s\")\n", content_path)
+		resource_string = resource_string + tfhelpers.TFFile("rubric", string(res), content_path)
 	}
 
 	if len(chal.Tickets.MarkStandard.Testcases) > 0 {
 		res, err := json.MarshalIndent(chal.Tickets.MarkStandard.Testcases, "", "  ")
 		if err != nil {
-			return "", err
+			return "", []string{}, err
 		}
 		content_path := path.Join(folder_path, "testcases.json")
-		f, e := os.Create(content_path)
-		if e != nil {
-			return "", e
-		}
-		f.Write(res)
-		resource_string = resource_string + fmt.Sprintf("\ttestcase_json = file(\"%s\")\n", content_path)
+		resource_string = resource_string + tfhelpers.TFFile("testcases", string(res), content_path)
 	}
 
-	chal.Tickets.MarkStandard.RunLimit.Pty.If(func(val bool) {
-		resource_string = resource_string + fmt.Sprintf("\ttestcase_pty = %t\n", val)
-	})
-	if chal.Tickets.MarkStandard.Easy {
-		resource_string = resource_string + fmt.Sprintf("\ttestcase_easy = %t\n", chal.Tickets.MarkStandard.Easy)
-	}
-	if chal.Tickets.MarkStandard.MarkAll {
-		resource_string = resource_string + fmt.Sprintf("\ttestcase_mark_all = %t\n", chal.Tickets.MarkStandard.MarkAll)
-	}
-	if chal.Tickets.MarkStandard.Overlay {
-		resource_string = resource_string + fmt.Sprintf("\ttestcase_overlay_test_files = %t\n", chal.Tickets.MarkStandard.Overlay)
-	}
+	tfhelpers.TFProp("testcase_pty", chal.Tickets.MarkStandard.RunLimit.Pty, nil)
+	tfhelpers.TFProp("testcase_easy", chal.Tickets.MarkStandard.Easy, false)
+	tfhelpers.TFProp("testcase_mark_all", chal.Tickets.MarkStandard.MarkAll, false)
+	tfhelpers.TFProp("testcase_overlay_test_files", chal.Tickets.MarkStandard.Overlay, false)
 
-	// TODO: Test cases
 	resource_string = resource_string + "}"
 
-	return resource_string, nil
+	return resource_string, resources, nil
 }

@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 	"terraform-provider-edstem/internal/client"
+	"terraform-provider-edstem/internal/tfhelpers"
 
 	"github.com/markphelps/optional"
 )
@@ -143,160 +144,115 @@ func CreateLesson(c *client.Client, lesson *Lesson) error {
 	return UpdateLesson(c, lesson)
 }
 
-func LessonToTerraform(c *client.Client, lesson_id int, resource_name string, folder_path string) (string, error) {
+func LessonToTerraform(c *client.Client, lesson_id int, resource_name string, folder_path string) (string, []string, error) {
 	lesson, err := GetLesson(c, lesson_id)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
 	buf := bytes.Buffer{}
 	err = json.NewEncoder(&buf).Encode(lesson)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
 
+	resources := make([]string, 0)
+	resources = append(resources, fmt.Sprintf("edstem_lesson.%s %d", resource_name, lesson_id))
+
 	var resource_string = fmt.Sprintf("resource \"edstem_lesson\" %s {\n", resource_name)
-	resource_string = resource_string + fmt.Sprintf("\tid = %d\n", lesson.Id)
-	lesson.Attempts.If(func(val int) {
-		resource_string = resource_string + fmt.Sprintf("\tattempts = %d\n", val)
-	})
-	lesson.AvailableAt.If(func(val string) {
-		resource_string = resource_string + fmt.Sprintf("\tavailable_at = \"%s\"\n", val)
-	})
-	lesson.DueAt.If(func(val string) {
-		resource_string = resource_string + fmt.Sprintf("\tdue_at = \"%s\"\n", val)
-	})
-	if lesson.GradePassbackAutoSend {
-		resource_string = resource_string + fmt.Sprintf("\tgrade_passback_auto_send = %t\n", lesson.GradePassbackAutoSend)
-	}
-	if lesson.GradePassbackMode != "" {
-		resource_string = resource_string + fmt.Sprintf("\tgrade_passback_mode = \"%s\"\n", lesson.GradePassbackMode)
-	}
-	lesson.GradePassbackScaleTo.If(func(val string) {
-		resource_string = resource_string + fmt.Sprintf("\tgrade_passback_scale_to = \"%s\"\n", val)
-	})
-	lesson.Index.If(func(val int) {
-		resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", val)
-	})
-	resource_string = resource_string + fmt.Sprintf("\tis_hidden = %t\n", lesson.IsHidden)
-	if lesson.IsTimed {
-		resource_string = resource_string + fmt.Sprintf("\tis_timed = %t\n", lesson.IsTimed)
-	}
-	if lesson.IsUnlisted {
-		resource_string = resource_string + fmt.Sprintf("\tis_unlisted = %t\n", lesson.IsUnlisted)
-	}
-	resource_string = resource_string + fmt.Sprintf("\tkind = \"%s\"\n", lesson.Kind)
-	if lesson.LateSubmissions {
-		resource_string = resource_string + fmt.Sprintf("\tlate_submissions = %t\n", lesson.LateSubmissions)
-	}
-	lesson.LockedAt.If(func(val string) {
-		resource_string = resource_string + fmt.Sprintf("\tlocked_at = \"%s\"\n", val)
-	})
-	lesson.ModuleId.If(func(val int) {
-		resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", val)
-	})
-	if lesson.Openable {
-		resource_string = resource_string + fmt.Sprintf("\topenable = %t\n", lesson.Openable)
-	}
-	if lesson.OpenableWithoutAttempt {
-		resource_string = resource_string + fmt.Sprintf("\topenable = %t\n", lesson.OpenableWithoutAttempt)
-	}
+
+	resource_string = resource_string + tfhelpers.TFProp("id", lesson.Id, nil)
+	resource_string = resource_string + tfhelpers.TFProp("attempts", lesson.Attempts, nil)
+
+	resource_string = resource_string + tfhelpers.TFProp("available_at", lesson.AvailableAt, nil)
+	resource_string = resource_string + tfhelpers.TFProp("due_at", lesson.DueAt, nil)
+	resource_string = resource_string + tfhelpers.TFProp("locked_at", lesson.LockedAt, nil)
+	resource_string = resource_string + tfhelpers.TFProp("solutions_at", lesson.SolutionsAt, nil)
+
+	resource_string = resource_string + tfhelpers.TFProp("grade_passback_auto_send", lesson.GradePassbackAutoSend, false)
+	resource_string = resource_string + tfhelpers.TFProp("grade_passback_mode", lesson.GradePassbackMode, "")
+	resource_string = resource_string + tfhelpers.TFProp("grade_passback_scale_to", lesson.GradePassbackScaleTo, nil)
+
+	resource_string = resource_string + tfhelpers.TFProp("index", lesson.Index, nil)
+	resource_string = resource_string + tfhelpers.TFProp("is_hidden", lesson.IsHidden, nil)
+	resource_string = resource_string + tfhelpers.TFProp("is_timed", lesson.IsTimed, false)
+	resource_string = resource_string + tfhelpers.TFProp("is_unlisted", lesson.IsUnlisted, false)
+	resource_string = resource_string + tfhelpers.TFProp("late_submissions", lesson.LateSubmissions, false)
+	resource_string = resource_string + tfhelpers.TFProp("openable", lesson.Openable, false)
+	resource_string = resource_string + tfhelpers.TFProp("openable_without_attempt", lesson.OpenableWithoutAttempt, false)
+
+	resource_string = resource_string + tfhelpers.TFProp("kind", lesson.Kind, "")
+	resource_string = resource_string + tfhelpers.TFProp("module_id", lesson.ModuleId, nil)
 
 	if lesson.Outline != "" {
 		if strings.Contains(lesson.Outline, "\n") {
-			resource_string = resource_string + fmt.Sprintf("\toutline = <<EOT\n%s\nEOT\n", lesson.Outline)
+			resource_string = resource_string + tfhelpers.TFUnquote("outline", fmt.Sprintf("<<EOT\n%s\nEOT", lesson.Outline))
 		} else {
-			resource_string = resource_string + fmt.Sprintf("\toutline = \"%s\"\n", lesson.Outline)
+			resource_string = resource_string + tfhelpers.TFProp("outline", lesson.Outline, "")
 		}
 	}
-	if lesson.Password != "" {
-		resource_string = resource_string + fmt.Sprintf("\tpassword = \"%s\"\n", lesson.Password)
-	}
+	resource_string = resource_string + tfhelpers.TFProp("password", lesson.Password, "")
+	resource_string = resource_string + tfhelpers.TFProp("state", lesson.State, "active")
+	resource_string = resource_string + tfhelpers.TFProp("title", lesson.Title, "")
+	resource_string = resource_string + tfhelpers.TFProp("tutorial_regex", lesson.TutorialRegex, "")
+	resource_string = resource_string + tfhelpers.TFProp("type", lesson.Type, "")
+
 	// TODO: Prerequisites
-	if lesson.ReleaseChallengeSolutions {
-		resource_string = resource_string + fmt.Sprintf("\trelease_challenge_solutions = %t\n", lesson.ReleaseChallengeSolutions)
-	}
-	if lesson.ReleaseChallengeSolutionsWhileActive {
-		resource_string = resource_string + fmt.Sprintf("\trelease_challenge_solutions_while_active = %t\n", lesson.ReleaseChallengeSolutionsWhileActive)
-	}
-	if lesson.ReleaseFeedback {
-		resource_string = resource_string + fmt.Sprintf("\trelease_feedback = %t\n", lesson.ReleaseFeedback)
-	}
-	if lesson.ReleaseFeedbackWhileActive {
-		resource_string = resource_string + fmt.Sprintf("\trelease_feedback_while_active = %t\n", lesson.ReleaseFeedbackWhileActive)
-	}
-	if lesson.ReleaseQuizCorrectnessOnly {
-		resource_string = resource_string + fmt.Sprintf("\trelease_quiz_correctness_only = %t\n", lesson.ReleaseQuizCorrectnessOnly)
-	}
-	if lesson.ReleaseQuizSolutions {
-		resource_string = resource_string + fmt.Sprintf("\trelease_quiz_solutions = %t\n", lesson.ReleaseQuizSolutions)
-	}
-	if lesson.ReOpenSubmissions {
-		resource_string = resource_string + fmt.Sprintf("\treopen_submissions = %t\n", lesson.ReOpenSubmissions)
-	}
-	if lesson.RequireUserOverride {
-		resource_string = resource_string + fmt.Sprintf("\trequire_user_override = %t\n", lesson.RequireUserOverride)
-	}
-	resource_string = resource_string + fmt.Sprintf("\tquiz_active_status = \"%s\"\n", lesson.QuizSettings.QuizActiveStatus)
-	resource_string = resource_string + fmt.Sprintf("\tquiz_mode = \"%s\"\n", lesson.QuizSettings.QuizMode)
-	if lesson.QuizSettings.QuizQuestionNumberStyle != "" {
-		resource_string = resource_string + fmt.Sprintf("\tquiz_question_number_style = \"%s\"\n", lesson.QuizSettings.QuizQuestionNumberStyle)
-	}
 
-	lesson.SolutionsAt.If(func(val string) {
-		resource_string = resource_string + fmt.Sprintf("\tsolutions_at = \"%s\"\n", val)
-	})
-	if lesson.State != "active" {
-		resource_string = resource_string + fmt.Sprintf("\tstate = \"%s\"\n", lesson.State)
-	}
-	if lesson.TimerDuration != 60 {
-		resource_string = resource_string + fmt.Sprintf("\ttimer_duration = %d\n", lesson.TimerDuration)
-	}
-	if lesson.TimerExpirationAccess {
-		resource_string = resource_string + fmt.Sprintf("\ttimer_expiration_access = %t\n", lesson.TimerExpirationAccess)
-	}
+	resource_string = resource_string + tfhelpers.TFProp("release_challenge_solutions", lesson.ReleaseChallengeSolutions, false)
+	resource_string = resource_string + tfhelpers.TFProp("release_challenge_solutions_while_active", lesson.ReleaseChallengeSolutionsWhileActive, false)
+	resource_string = resource_string + tfhelpers.TFProp("release_feedback", lesson.ReleaseFeedback, false)
+	resource_string = resource_string + tfhelpers.TFProp("release_feedback_while_active", lesson.ReleaseFeedbackWhileActive, false)
+	resource_string = resource_string + tfhelpers.TFProp("release_quiz_correctness_only", lesson.ReleaseQuizCorrectnessOnly, false)
+	resource_string = resource_string + tfhelpers.TFProp("release_quiz_solutions", lesson.ReleaseQuizSolutions, false)
+	resource_string = resource_string + tfhelpers.TFProp("reopen_submissions", lesson.ReOpenSubmissions, false)
+	resource_string = resource_string + tfhelpers.TFProp("require_user_override", lesson.RequireUserOverride, false)
 
-	resource_string = resource_string + fmt.Sprintf("\ttitle = \"%s\"\n", lesson.Title)
-	if lesson.TutorialRegex != "" {
-		resource_string = resource_string + fmt.Sprintf("\ttutorial_regex = \"%s\"\n", lesson.TutorialRegex)
-	}
-	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", lesson.Type)
+	resource_string = resource_string + tfhelpers.TFProp("quiz_active_status", lesson.QuizSettings.QuizActiveStatus, "")
+	resource_string = resource_string + tfhelpers.TFProp("quiz_mode", lesson.QuizSettings.QuizMode, "")
+	resource_string = resource_string + tfhelpers.TFProp("quiz_question_number_style", lesson.QuizSettings.QuizQuestionNumberStyle, "")
+
+	resource_string = resource_string + tfhelpers.TFProp("timer_duration", lesson.TimerDuration, 60)
+	resource_string = resource_string + tfhelpers.TFProp("timer_expiration_access", lesson.TimerExpirationAccess, false)
 
 	resource_string = resource_string + "}"
 
 	slide_ids, e := GetSlideIds(c, lesson_id)
 	if e != nil {
-		return "", e
+		return "", []string{}, e
 	}
 
 	for i := range slide_ids {
 		slide_path := path.Join(folder_path, fmt.Sprintf("slide_%d", i))
 		e = os.MkdirAll(slide_path, 0777)
 		if e != nil {
-			return "", nil
+			return "", []string{}, nil
 		}
-		new_string, slide_err := SlideToTerraform(c, lesson_id, slide_ids[i], fmt.Sprintf("%s_slide_%d", resource_name, i), slide_path, &resource_name)
+		new_string, slide_resources, slide_err := SlideToTerraform(c, lesson_id, slide_ids[i], fmt.Sprintf("%s_slide_%d", resource_name, i), slide_path, &resource_name)
 		if slide_err != nil {
-			return "", slide_err
+			return "", []string{}, slide_err
 		}
 		resource_string = resource_string + "\n\n" + new_string
+		resources = append(resources, slide_resources...)
 	}
 
-	return resource_string, nil
+	return resource_string, resources, nil
 }
 
-func CourseToTerraform(c *client.Client, folder_path string) (string, error) {
+func CourseToTerraform(c *client.Client, folder_path string) (string, []string, error) {
 	lessons, err := GetLessons(c)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
 	lesson_terraform_blocks := make([]string, 0)
+	resources := make([]string, 0)
 	for i, lesson := range lessons {
 		lesson_path := fmt.Sprintf("lesson_%d", i)
-		res, e := LessonToTerraform(c, lesson.Id, lesson_path, path.Join(folder_path, lesson_path))
+		res, lesson_resources, e := LessonToTerraform(c, lesson.Id, lesson_path, path.Join(folder_path, lesson_path))
 		if e != nil {
-			return "", e
+			return "", []string{}, e
 		}
 		lesson_terraform_blocks = append(lesson_terraform_blocks, res)
+		resources = append(resources, lesson_resources...)
 	}
-	return strings.Join(lesson_terraform_blocks, "\n\n\n"), nil
+	return strings.Join(lesson_terraform_blocks, "\n\n\n"), resources, nil
 }

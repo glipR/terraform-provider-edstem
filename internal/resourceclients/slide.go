@@ -8,6 +8,7 @@ import (
 	"path"
 	"terraform-provider-edstem/internal/client"
 	"terraform-provider-edstem/internal/md2ed"
+	"terraform-provider-edstem/internal/tfhelpers"
 
 	"github.com/markphelps/optional"
 )
@@ -257,71 +258,56 @@ func CreateSlide(c *client.Client, slide *Slide) error {
 	return UpdateSlide(c, slide)
 }
 
-func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, parent_resource_name *string) (string, error) {
+func SlideToTerraform(c *client.Client, lesson_id int, slide_id int, resource_name string, folder_path string, parent_resource_name *string) (string, []string, error) {
 	slide, err := GetSlide(c, lesson_id, slide_id)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
 	buf := bytes.Buffer{}
 	err = json.NewEncoder(&buf).Encode(slide)
 	if err != nil {
-		return "", err
+		return "", []string{}, err
 	}
 
+	resources := make([]string, 0)
+	resources = append(resources, fmt.Sprintf("edstem_slide.%s %d,%d", resource_name, lesson_id, slide_id))
+
 	var resource_string = fmt.Sprintf("resource \"edstem_slide\" %s {\n", resource_name)
-	resource_string = resource_string + fmt.Sprintf("\tid = %d\n", slide.Id)
-	resource_string = resource_string + fmt.Sprintf("\ttype = \"%s\"\n", slide.Type)
+	resource_string = resource_string + tfhelpers.TFProp("id", slide.Id, nil)
+	resource_string = resource_string + tfhelpers.TFProp("type", slide.Type, nil)
 	if parent_resource_name != nil {
-		resource_string = resource_string + fmt.Sprintf("\tlesson_id = edstem_lesson.%s.id\n", *parent_resource_name)
+		resource_string = resource_string + tfhelpers.TFUnquote("lesson_id", fmt.Sprintf("edstem_lesson.%s.id", *parent_resource_name))
 	} else {
-		resource_string = resource_string + fmt.Sprintf("\tlesson_id = %d\n", slide.LessonId)
+		resource_string = resource_string + tfhelpers.TFProp("lesson_id", slide.LessonId, nil)
 	}
-	resource_string = resource_string + fmt.Sprintf("\ttitle = \"%s\"\n", slide.Title)
-	resource_string = resource_string + fmt.Sprintf("\tindex = %d\n", slide.Index)
-	if slide.IsHidden {
-		resource_string = resource_string + fmt.Sprintf("\tis_hidden = %t\n", slide.IsHidden)
-	}
+
+	resource_string = resource_string + tfhelpers.TFProp("title", slide.Title, "")
+	resource_string = resource_string + tfhelpers.TFProp("index", slide.Index, nil)
+	resource_string = resource_string + tfhelpers.TFProp("is_hidden", slide.IsHidden, false)
 	if slide.Type == "video" {
-		slide.VideoUrl.If(func(val string) {
-			if val != "" {
-				resource_string = resource_string + fmt.Sprintf("\turl = \"%s\"\n", val)
-			}
-		})
+		resource_string = resource_string + tfhelpers.TFProp("url", slide.VideoUrl, nil)
 	} else if slide.Type == "webpage" {
-		slide.Url.If(func(val string) {
-			if val != "" {
-				resource_string = resource_string + fmt.Sprintf("\turl = \"%s\"\n", val)
-			}
-		})
+		resource_string = resource_string + tfhelpers.TFProp("url", slide.Url, nil)
 	} else if slide.Type == "html" {
 		if slide.Html.Present() {
 			content_path := path.Join(folder_path, "content.html")
-			f, e := os.Create(content_path)
-			if e != nil {
-				return "", e
-			}
-			f.WriteString(md2ed.RenderEdToMD(slide.Html.MustGet(), folder_path, true))
-			resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
+			resource_string = resource_string + tfhelpers.TFFile("content", slide.Html.MustGet(), content_path)
 		}
 	}
 	if slide.Content != "" {
 		content_path := path.Join(folder_path, "content.md")
-		f, e := os.Create(content_path)
-		if e != nil {
-			return "", e
-		}
-		f.WriteString(md2ed.RenderEdToMD(slide.Content, folder_path, true))
-		resource_string = resource_string + fmt.Sprintf("\tcontent = file(\"%s\")\n", content_path)
+		resource_string = resource_string + tfhelpers.TFFile("content", md2ed.RenderEdToMD(slide.Content, folder_path, true), content_path)
 	}
 	resource_string = resource_string + "}"
 
 	if slide.Type == "code" {
-		s, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path, &resource_name, parent_resource_name)
+		s, challenge_resources, e := ChallengeToTerraform(c, lesson_id, slide_id, fmt.Sprintf("%s_challenge", resource_name), folder_path, &resource_name, parent_resource_name)
 		if e != nil {
-			return "", e
+			return "", []string{}, e
 		}
 		resource_string = resource_string + "\n\n" + s
+		resources = append(resources, challenge_resources...)
 	}
 
-	return resource_string, nil
+	return resource_string, resources, nil
 }

@@ -60,9 +60,10 @@ func import_tf(object_type string, args ImportArgs) error {
 	}
 
 	var tf string
+	var resources []string
 
 	if object_type == "course" {
-		tf, err = resourceclients.CourseToTerraform(client, args.FolderPath)
+		tf, resources, err = resourceclients.CourseToTerraform(client, args.FolderPath)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func import_tf(object_type string, args ImportArgs) error {
 		} else {
 			resource_name = *args.ResourceName
 		}
-		tf, err = resourceclients.LessonToTerraform(client, lesson_id, resource_name, args.FolderPath)
+		tf, resources, err = resourceclients.LessonToTerraform(client, lesson_id, resource_name, args.FolderPath)
 		if err != nil {
 			return err
 		}
@@ -105,7 +106,7 @@ func import_tf(object_type string, args ImportArgs) error {
 		} else {
 			resource_name = *args.ResourceName
 		}
-		tf, err = resourceclients.SlideToTerraform(client, lesson_id, slide_id, resource_name, args.FolderPath, nil)
+		tf, resources, err = resourceclients.SlideToTerraform(client, lesson_id, slide_id, resource_name, args.FolderPath, nil)
 		if err != nil {
 			return err
 		}
@@ -130,7 +131,7 @@ func import_tf(object_type string, args ImportArgs) error {
 		} else {
 			resource_name = *args.ResourceName
 		}
-		tf, err = resourceclients.ChallengeToTerraform(client, lesson_id, slide_id, resource_name, args.FolderPath, nil, nil)
+		tf, resources, err = resourceclients.ChallengeToTerraform(client, lesson_id, slide_id, resource_name, args.FolderPath, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -155,6 +156,17 @@ provider "edstem" {
 	f.WriteString(preamble)
 	f.WriteString("\n\n")
 	f.WriteString(tf)
+	f.Close()
+
+	f, e = os.Create(path.Join(args.FolderPath, "imports.sh"))
+	if e != nil {
+		return e
+	}
+	for _, resource := range resources {
+		// The resource objects are already separated by a space into <resource_name> <id>
+		f.WriteString(fmt.Sprintf("terraform import %s\n", resource))
+	}
+	f.Close()
 	return nil
 }
 
