@@ -35,18 +35,16 @@ go run main.go import_tf lesson my_course -c 12108 -l 36778
 go run main.go import_tf course my_course -c 12108
 ```
 
-(TODO: Make the import script have the (default) option to also fill the tfstate file)
-
 ## Currently not functional components
 
 * REAPPLYING A RUBRIC MARKED ASSESSMENT MAY REMOVE RECORDED FEEDBACK/MARKS
+  * Generally I'd recommend not managing the rubric through terraform - it is too likely to cause more harm than good.
 * Terraform Actions:
     * Destroying objects
 * Slides
     * Survey, SQL Challenge, RStudio Challenge, Jupyter Challenge, Web Challenge
     * Question types other than Multi-Choice
     * Code Challenges that aren't `none`, `custom` or `code`.
-* Terraform is unaware if the rubric is changed in Ed (It will always try to reapply)
 
 ## Cautionary areas
 
@@ -91,13 +89,3 @@ Fill this in for each provider
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
 
 To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-To generate or update documentation, run `go generate`.
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```shell
-make testacc
-```
