@@ -37,6 +37,7 @@ go run main.go import_tf course my_course -c 12108
 
 ## Currently not functional components
 
+* Documentation
 * REAPPLYING A RUBRIC MARKED ASSESSMENT MAY REMOVE RECORDED FEEDBACK/MARKS
   * Generally I'd recommend not managing the rubric through terraform - it is too likely to cause more harm than good.
 * Terraform Actions:
