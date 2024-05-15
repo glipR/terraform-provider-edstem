@@ -17,49 +17,49 @@ description: |-
 
 ### Required
 
-- `folder_path` (String)
-- `folder_sha` (String)
-- `lesson_id` (Number)
-- `slide_id` (Number)
+- `folder_path` (String) Folder path to the folder containing the workspace sources for this code slide.
+- `folder_sha` (String) SHA checksum of the folder content to ensure terraform recognises when changes to the content have been made. Recommended: `sha1(join("", [for f in fileset(path.cwd, "<folder_path>/**") : filesha1("${path.cwd}/${f}")]))`
+- `lesson_id` (Number) Integer ID identifying the Lesson containing this challenge. This can be found in the URL of a slide. For example, `https://edstem.org/au/courses/<course_id>/lessons/<lesson_id>/slides/<slide_id>`. Here we want the lesson_id.
+- `slide_id` (Number) Integer ID identifying the Slide containing this challenge. This can be found in the URL of a slide. For example, `https://edstem.org/au/courses/<course_id>/lessons/<lesson_id>/slides/<slide_id>`. Here we want the slide_id.
 
 ### Optional
 
-- `allow_submit_after_marking_limit` (Boolean)
-- `attempt_limit_interval` (Number)
-- `build_command` (String)
-- `criteria` (String)
-- `custom_mark_time_limit_ms` (Number)
-- `custom_run_command` (String)
-- `explanation` (String)
-- `feature_anonymous_submissions` (Boolean)
+- `allow_submit_after_marking_limit` (Boolean) Allow students to submit once the submission limit is reached, and simply not trigger the test cases.
+- `attempt_limit_interval` (Number) Minute interval that limits the number of attempts.
+- `build_command` (String) Terminal command executed when the build button is pressed.
+- `criteria` (String) Old criteria format for marking. New lessons won't have this.
+- `custom_mark_time_limit_ms` (Number) Time limit on custom marking script to complete in milliseconds.
+- `custom_run_command` (String) When using the `custom` type, the run command used to generate the test json.
+- `explanation` (String) Textual explanation shown alongside the code solution.
+- `feature_anonymous_submissions` (Boolean) Allow anonymous submissions.
 - `feature_arguments` (Boolean)
-- `feature_check` (Boolean)
-- `feature_confirm_submit` (Boolean)
-- `feature_connect` (Boolean)
-- `feature_editor` (Boolean)
-- `feature_feedback` (Boolean)
+- `feature_check` (Boolean) Show the "Check" button.
+- `feature_confirm_submit` (Boolean) Show students a modal before submitting.
+- `feature_connect` (Boolean) Allow the workspace to be connected to.
+- `feature_editor` (Boolean) Enable the code editor.
+- `feature_feedback` (Boolean) Allow inline feedback on code to be viewed.
 - `feature_git_submission` (Boolean)
 - `feature_intermediate_files` (Boolean)
 - `feature_manual_completion` (Boolean)
-- `feature_mark` (Boolean)
+- `feature_mark` (Boolean) Show the "Mark" button.
 - `feature_remote_desktop` (Boolean)
-- `feature_run` (Boolean)
+- `feature_run` (Boolean) Show the "Run" button.
 - `feature_run_before_submit` (Boolean)
-- `feature_terminal` (Boolean)
-- `max_submissions_per_interval` (Number)
-- `only_git_submission` (Boolean)
+- `feature_terminal` (Boolean) Show the "Terminal" button.
+- `max_submissions_per_interval` (Number) Maximum number of submissions in the `attempt_limit_interval`.
+- `only_git_submission` (Boolean) Whether students can only submit via commiting their changes and pushing via git.
 - `passback_max_automatic_score` (Number)
 - `passback_scale_to` (Number)
 - `passback_scoring_mode` (String)
-- `per_testcase_scores` (Boolean)
-- `rubric` (String)
-- `rubric_points` (Number)
-- `run_command` (String)
+- `per_testcase_scores` (Boolean) Whether points should be awarded per test case.
+- `rubric` (String) New rubric format for marking. Rubric text fields support markdown. [PLEASE AVOID USING (or remove after initial apply) - THIS MAY REMOVE STUDENT FEEDBACK ON REAPPLY]
+- `rubric_points` (Number) Points associated with the rubric.
+- `run_command` (String) Terminal command executed when the run button is pressed.
 - `terminal_command` (String)
-- `test_command` (String)
-- `testcase_easy` (Boolean)
-- `testcase_json` (String)
+- `test_command` (String) Terminal command executed when the test button is pressed.
+- `testcase_easy` (Boolean) Ignores whitespace when checking tests.
+- `testcase_json` (String) JSON string containing all test cases for `code` style challenges. See examples for the format.
 - `testcase_mark_all` (Boolean)
-- `testcase_overlay_test_files` (Boolean)
-- `testcase_pty` (Boolean)
-- `type` (String)
+- `testcase_overlay_test_files` (Boolean) Overlay the `testbase` files when marking.
+- `testcase_pty` (Boolean) Whether output files contain the pseudo-terminal format (show input and output interleaved).
+- `type` (String) The way the code challenge will be executed / marked. `none`, `code`, `custom` are all supported formats.

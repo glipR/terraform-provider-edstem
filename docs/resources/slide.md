@@ -17,19 +17,19 @@ description: |-
 
 ### Required
 
-- `index` (Number)
-- `lesson_id` (Number)
-- `title` (String)
-- `type` (String)
+- `index` (Number) Where this slide should slot within the slide list. 1 = first slide, 2 = second slide...
+- `lesson_id` (Number) Integer ID identifying the Lesson containing this slide. This can be found in the URL of a slide. For example, `https://edstem.org/au/courses/<course_id>/lessons/<lesson_id>/slides/<slide_id>`. Here we want the lesson_id.
+- `title` (String) Title of the slide.
+- `type` (String) String identifying the type of slide. Options are `document`, `quiz`, `code`, `pdf`, `video`, `webpage`, `html`.
 
 ### Optional
 
-- `content` (String)
-- `content_type` (String)
-- `file_path` (String)
-- `is_hidden` (Boolean)
-- `url` (String)
+- `content` (String) Content of the slide.
+- `content_type` (String) Format of the slide content. Defaults to `md` (Markdown). Set to `ed` if you want to enter in the xml directly.
+- `file_path` (String) The path for certain slide types to load content (like `video` or `pdf`)
+- `is_hidden` (Boolean) Whether this slide should be hidden from students.
+- `url` (String) The path for webpage slides to load from.
 
 ### Read-Only
 
-- `id` (Number) The ID of this resource.
+- `id` (Number) Integer ID identifying the Slide. This can be found in the URL of a slide. For example, `https://edstem.org/au/courses/<course_id>/lessons/<lesson_id>/slides/<slide_id>`. Here we want the slide_id.
